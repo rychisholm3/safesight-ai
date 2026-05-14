@@ -2,9 +2,10 @@
 Smoke test: webcam -> YOLO26 detection -> ByteTrack -> annotated live window.
 
 Usage:
-    python scripts/smoke_test.py                  # webcam 0, yolo26n.pt
+    python scripts/smoke_test.py                  # webcam 0, yolo26s.pt, imgsz=1280
     python scripts/smoke_test.py --device 1       # different webcam
-    python scripts/smoke_test.py --confidence 0.3 # lower threshold
+    python scripts/smoke_test.py --sahi           # sliced inference (better for far-away objects)
+    python scripts/smoke_test.py --imgsz 640      # faster inference at lower resolution
 
 Press q in the window to quit.
 """
@@ -69,8 +70,10 @@ def _annotate(frame_rgb: np.ndarray, tracked: list[TrackedObject], detections: l
 def main() -> None:
     parser = argparse.ArgumentParser(description="SafeSight smoke test — live webcam view")
     parser.add_argument("--device", type=int, default=0, help="Webcam device index (default: 0)")
-    parser.add_argument("--model", default="yolo26n.pt", help="YOLO model path/name")
-    parser.add_argument("--confidence", type=float, default=0.4, help="Detection confidence threshold")
+    parser.add_argument("--model", default="yolo26s.pt", help="YOLO model path/name")
+    parser.add_argument("--confidence", type=float, default=0.3, help="Detection confidence threshold")
+    parser.add_argument("--imgsz", type=int, default=1280, help="Inference image size (default: 1280)")
+    parser.add_argument("--sahi", action="store_true", help="Enable sliced inference for small/distant objects")
     args = parser.parse_args()
 
     logger.info("Opening webcam device %d", args.device)
@@ -78,7 +81,12 @@ def main() -> None:
     logger.info("Source: %dx%d @ %.0f fps", source.info.width, source.info.height, source.info.fps)
 
     logger.info("Loading model %s (downloads on first run if missing)", args.model)
-    detector = Detector(model_path=args.model, confidence=args.confidence)
+    detector = Detector(
+        model_path=args.model,
+        confidence=args.confidence,
+        imgsz=args.imgsz,
+        sahi=args.sahi,
+    )
     tracker = Tracker(frame_rate=source.info.fps)
 
     frame_id = 0

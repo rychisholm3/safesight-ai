@@ -133,6 +133,23 @@ class TestTracker:
         tracker.reset()
         mock_bytetrack.return_value.reset.assert_called_once()
 
+    def test_track_activation_threshold_forwarded(self, mock_bytetrack: MagicMock) -> None:
+        Tracker(track_activation_threshold=0.3)
+        _, kwargs = mock_bytetrack.call_args
+        assert kwargs["track_activation_threshold"] == 0.3
+
+    def test_minimum_consecutive_frames_forwarded(self, mock_bytetrack: MagicMock) -> None:
+        Tracker(minimum_consecutive_frames=3)
+        _, kwargs = mock_bytetrack.call_args
+        assert kwargs["minimum_consecutive_frames"] == 3
+
+    def test_defaults_tuned_for_security_cameras(self, mock_bytetrack: MagicMock) -> None:
+        Tracker()
+        _, kwargs = mock_bytetrack.call_args
+        assert kwargs["lost_track_buffer"] == 60
+        assert kwargs["track_activation_threshold"] == 0.5
+        assert kwargs["minimum_consecutive_frames"] == 1
+
     def test_class_registry_stable_across_frames(self, mock_bytetrack: MagicMock) -> None:
         mock_bytetrack.return_value.update.return_value = tracked_sv([
             (0.0, 0.0, 50.0, 50.0, 0, 0.9, 1)

@@ -22,19 +22,26 @@ class TrackedObject:
 class Tracker:
     def __init__(
         self,
-        lost_track_buffer: int = 30,
+        lost_track_buffer: int = 60,
         frame_rate: float = 30.0,
+        track_activation_threshold: float = 0.5,
+        minimum_consecutive_frames: int = 1,
     ) -> None:
         self._bytetrack = ByteTrackTracker(
             lost_track_buffer=lost_track_buffer,
             frame_rate=frame_rate,
+            track_activation_threshold=track_activation_threshold,
+            minimum_consecutive_frames=minimum_consecutive_frames,
         )
         self._class_name_to_id: dict[str, int] = {}
         self._id_to_class_name: dict[int, str] = {}
         logger.info(
-            "Tracker initialised: lost_track_buffer=%d frame_rate=%.1f",
+            "Tracker initialised: lost_track_buffer=%d frame_rate=%.1f "
+            "activation_threshold=%.2f min_consecutive=%d",
             lost_track_buffer,
             frame_rate,
+            track_activation_threshold,
+            minimum_consecutive_frames,
         )
 
     def _class_id(self, class_name: str) -> int:

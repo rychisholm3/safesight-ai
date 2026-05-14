@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
+import supervision as sv
 
 from src.detector import Detection, Detector
 
@@ -28,6 +29,13 @@ def make_mock_result(rows: list[tuple[float, float, float, float, int, float]]) 
 @pytest.fixture
 def mock_yolo():
     with patch("src.detector.YOLO") as mock_cls:
+        mock_cls.return_value.names = NAMES
+        yield mock_cls
+
+
+@pytest.fixture
+def mock_slicer():
+    with patch("supervision.InferenceSlicer") as mock_cls:
         yield mock_cls
 
 
@@ -89,7 +97,54 @@ class TestDetector:
         det = Detector().detect(FRAME, frame_id=0)[0]
         assert all(isinstance(v, int) for v in det.bbox)
 
-    def test_confidence_threshold_forwarded_to_model(self, mock_yolo: MagicMock) -> None:
+    def test_confidence_and_imgsz_forwarded_to_model(self, mock_yolo: MagicMock) -> None:
         mock_yolo.return_value.return_value = [make_mock_result([])]
-        Detector(confidence=0.7).detect(FRAME, frame_id=0)
-        mock_yolo.return_value.assert_called_once_with(FRAME, conf=0.7, verbose=False)
+        Detector(confidence=0.7, imgsz=640).detect(FRAME, frame_id=0)
+        mock_yolo.return_value.assert_called_once_with(FRAME, conf=0.7, imgsz=640, verbose=False)
+
+    def test_imgsz_default_is_1280(self, mock_yolo: MagicMock) -> None:
+        mock_yolo.return_value.return_value = [make_mock_result([])]
+        Detector().detect(FRAME, frame_id=0)
+        _, kwargs = mock_yolo.return_value.call_args
+        assert kwargs["imgsz"] == 1280
+
+
+class TestDetectorSahi:
+    def test_sahi_false_does_not_create_slicer(self, mock_yolo: MagicMock, mock_slicer: MagicMock) -> None:
+        Detector(sahi=False)
+        mock_slicer.assert_not_called()
+
+    def test_sahi_true_creates_slicer(self, mock_yolo: MagicMock, mock_slicer: MagicMock) -> None:
+        Detector(sahi=True)
+        mock_slicer.assert_called_once()
+
+    def test_sahi_passes_slice_and_overlap_params(self, mock_yolo: MagicMock, mock_slicer: MagicMock) -> None:
+        Detector(sahi=True, sahi_slice_wh=512, sahi_overlap_wh=80)
+        _, kwargs = mock_slicer.call_args
+        assert kwargs["slice_wh"] == 512
+        assert kwargs["overlap_wh"] == 80
+
+    def test_sahi_detect_calls_slicer_not_model_directly(self, mock_yolo: MagicMock, mock_slicer: MagicMock) -> None:
+        mock_slicer.return_value.return_value = sv.Detections.empty()
+        d = Detector(sahi=True)
+        d.detect(FRAME, frame_id=0)
+        mock_slicer.return_value.assert_called_once_with(FRAME)
+        mock_yolo.return_value.assert_not_called()
+
+    def test_sahi_detections_converted_correctly(self, mock_yolo: MagicMock, mock_slicer: MagicMock) -> None:
+        mock_slicer.return_value.return_value = sv.Detections(
+            xyxy=np.array([[10.0, 20.0, 100.0, 200.0]]),
+            confidence=np.array([0.8]),
+            class_id=np.array([0]),
+        )
+        d = Detector(sahi=True)
+        result = d.detect(FRAME, frame_id=7)
+        assert len(result) == 1
+        assert result[0].bbox == (10, 20, 100, 200)
+        assert result[0].class_name == "person"
+        assert abs(result[0].confidence - 0.8) < 1e-6
+        assert result[0].frame_id == 7
+
+    def test_sahi_empty_result_returns_empty_list(self, mock_yolo: MagicMock, mock_slicer: MagicMock) -> None:
+        mock_slicer.return_value.return_value = sv.Detections.empty()
+        assert Detector(sahi=True).detect(FRAME, frame_id=0) == []
