@@ -145,8 +145,8 @@ Polygons are pixel coordinates in the source frame.
 - [x] Threaded frame reader with bounded queue
 - [x] YOLO26 inference wrapper
 - [x] ByteTrack integration with persistent IDs
-- [ ] Rules engine: PPE checks
-- [ ] Rules engine: zone intrusion (point-in-polygon)
+- [x] Rules engine: PPE checks
+- [x] Rules engine: zone intrusion (point-in-polygon)
 - [ ] Per-ID event debouncing
 - [ ] SQLite event store + snapshot writer
 - [ ] FastAPI REST endpoints (events, zones, stats)
