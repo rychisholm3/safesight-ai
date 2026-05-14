@@ -11,6 +11,7 @@ Press q in the window to quit.
 """
 import argparse
 import logging
+import signal
 import sys
 import time
 from pathlib import Path
@@ -27,6 +28,13 @@ from src.tracker import Tracker, TrackedObject
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("smoke_test")
+
+_quit = False
+
+
+def _handle_sigint(sig: int, frame: object) -> None:
+    global _quit
+    _quit = True
 
 # Colour palette — cycles through track IDs so each person gets a distinct colour
 _PALETTE = [
@@ -73,7 +81,7 @@ def main() -> None:
     parser.add_argument("--model", default="yolo26s.pt", help="YOLO model path/name")
     parser.add_argument("--confidence", type=float, default=0.3, help="Detection confidence threshold")
     parser.add_argument("--imgsz", type=int, default=1280, help="Inference image size (default: 1280)")
-    parser.add_argument("--sahi", action="store_true", help="Enable sliced inference for small/distant objects")
+    parser.add_argument("--sahi", action="store_true", help="Enable sliced inference — GPU only, kills CPU fps")
     args = parser.parse_args()
 
     logger.info("Opening webcam device %d", args.device)
@@ -93,9 +101,11 @@ def main() -> None:
     fps = 0.0
     t_last = time.perf_counter()
 
-    logger.info("Pipeline running — press q in the window to quit")
+    signal.signal(signal.SIGINT, _handle_sigint)
+    window = "SafeSight — smoke test  (q / ESC to quit)"
+    logger.info("Pipeline running — press q or ESC in the window to quit")
     with FrameReader(source).start() as reader:
-        while True:
+        while not _quit:
             ok, frame = reader.read(timeout=1.0)
             if not ok:
                 logger.warning("No frame received — webcam disconnected?")
@@ -108,12 +118,15 @@ def main() -> None:
             fps = 0.9 * fps + 0.1 / max(now - t_last, 1e-6)
             t_last = now
 
-            cv2.imshow("SafeSight — smoke test  (q to quit)", _annotate(frame, tracked, detections, fps))
+            cv2.imshow(window, _annotate(frame, tracked, detections, fps))
 
             if frame_id % 30 == 0:
                 logger.info("frame=%d  det=%d  tracks=%d  fps=%.1f", frame_id, len(detections), len(tracked), fps)
 
-            if cv2.waitKey(1) & 0xFF == ord("q"):
+            key = cv2.waitKey(1) & 0xFF
+            if key in (ord("q"), 27):  # q or ESC
+                break
+            if cv2.getWindowProperty(window, cv2.WND_PROP_VISIBLE) < 1:
                 break
 
             frame_id += 1

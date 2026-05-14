@@ -143,12 +143,26 @@ class TestTracker:
         _, kwargs = mock_bytetrack.call_args
         assert kwargs["minimum_consecutive_frames"] == 3
 
-    def test_defaults_tuned_for_security_cameras(self, mock_bytetrack: MagicMock) -> None:
-        Tracker()
+    def test_lost_track_buffer_computed_from_seconds_and_fps(self, mock_bytetrack: MagicMock) -> None:
+        Tracker(frame_rate=10.0, lost_track_seconds=3.0)
         _, kwargs = mock_bytetrack.call_args
-        assert kwargs["lost_track_buffer"] == 60
-        assert kwargs["track_activation_threshold"] == 0.5
-        assert kwargs["minimum_consecutive_frames"] == 1
+        assert kwargs["lost_track_buffer"] == 30  # 3.0s * 10fps
+
+    def test_lost_track_buffer_minimum_is_one(self, mock_bytetrack: MagicMock) -> None:
+        Tracker(frame_rate=30.0, lost_track_seconds=0.0)
+        _, kwargs = mock_bytetrack.call_args
+        assert kwargs["lost_track_buffer"] == 1
+
+    def test_defaults_stable_across_frame_rates(self, mock_bytetrack: MagicMock) -> None:
+        Tracker(frame_rate=5.0)
+        _, kwargs5 = mock_bytetrack.call_args
+        Tracker(frame_rate=30.0)
+        _, kwargs30 = mock_bytetrack.call_args
+        # 2s default: 10 frames at 5fps, 60 frames at 30fps
+        assert kwargs5["lost_track_buffer"] == 10
+        assert kwargs30["lost_track_buffer"] == 60
+        assert kwargs5["minimum_consecutive_frames"] == 2
+        assert kwargs5["track_activation_threshold"] == 0.5
 
     def test_class_registry_stable_across_frames(self, mock_bytetrack: MagicMock) -> None:
         mock_bytetrack.return_value.update.return_value = tracked_sv([

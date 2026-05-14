@@ -22,11 +22,13 @@ class TrackedObject:
 class Tracker:
     def __init__(
         self,
-        lost_track_buffer: int = 60,
         frame_rate: float = 30.0,
+        lost_track_seconds: float = 2.0,
         track_activation_threshold: float = 0.5,
-        minimum_consecutive_frames: int = 1,
+        minimum_consecutive_frames: int = 2,
     ) -> None:
+        # Convert time to frames so the buffer stays consistent across frame rates
+        lost_track_buffer = max(1, int(lost_track_seconds * frame_rate))
         self._bytetrack = ByteTrackTracker(
             lost_track_buffer=lost_track_buffer,
             frame_rate=frame_rate,
@@ -36,9 +38,10 @@ class Tracker:
         self._class_name_to_id: dict[str, int] = {}
         self._id_to_class_name: dict[int, str] = {}
         logger.info(
-            "Tracker initialised: lost_track_buffer=%d frame_rate=%.1f "
+            "Tracker initialised: lost_track_buffer=%d (%.1fs @ %.1ffps) "
             "activation_threshold=%.2f min_consecutive=%d",
             lost_track_buffer,
+            lost_track_seconds,
             frame_rate,
             track_activation_threshold,
             minimum_consecutive_frames,
