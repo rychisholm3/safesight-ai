@@ -143,7 +143,7 @@ Polygons are pixel coordinates in the source frame.
 - [x] Project scaffolding, README, architecture
 - [x] Video source abstraction (file / webcam / RTSP)
 - [x] Threaded frame reader with bounded queue
-- [ ] YOLOv8 inference wrapper
+- [x] YOLO26 inference wrapper
 - [ ] ByteTrack integration with persistent IDs
 - [ ] Rules engine: PPE checks
 - [ ] Rules engine: zone intrusion (point-in-polygon)
