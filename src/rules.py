@@ -53,6 +53,15 @@ class Violation:
     missing_ppe: list[str] = field(default_factory=list)
 
 
+# ── "No-PPE" indicator classes emitted by the fine-tuned model ───────────────
+# Maps the explicit absence class name → canonical PPE name it negates.
+_NO_PPE_INDICATORS: dict[str, str] = {
+    "no-hardhat": "hardhat",
+    "no-vest":    "vest",
+    "no-mask":    "mask",
+}
+
+
 class RulesEngine:
     def __init__(self, config: SceneConfig, ppe_overlap_threshold: float = 0.3) -> None:
         self._config = config
@@ -65,18 +74,35 @@ class RulesEngine:
             config.required_ppe,
         )
 
-    def _ppe_present(self, person: TrackedObject, detections: list[Detection]) -> set[str]:
-        """Return PPE class names whose centre point falls inside the person's bbox."""
+    def _ppe_present(
+        self, person: TrackedObject, detections: list[Detection]
+    ) -> tuple[set[str], set[str]]:
+        """Return (present, explicitly_absent) PPE sets for this person.
+
+        *present*  — PPE items whose bbox centre overlaps the person bbox.
+        *explicitly_absent* — PPE items flagged by a "no-*" indicator class
+                              overlapping the same person (e.g. NO-Hardhat).
+        Both sets use canonical lowercase names ("hardhat", "vest", …).
+        """
         px1, py1, px2, py2 = person.bbox
-        found: set[str] = set()
+        present:  set[str] = set()
+        absent:   set[str] = set()
+
         for det in detections:
             if det.class_name == "person":
                 continue
             cx = (det.bbox[0] + det.bbox[2]) / 2
             cy = (det.bbox[1] + det.bbox[3]) / 2
-            if px1 <= cx <= px2 and py1 <= cy <= py2:
-                found.add(det.class_name)
-        return found
+            if not (px1 <= cx <= px2 and py1 <= cy <= py2):
+                continue
+
+            if det.class_name in _NO_PPE_INDICATORS:
+                # Explicit absence detector fired → the corresponding PPE is missing
+                absent.add(_NO_PPE_INDICATORS[det.class_name])
+            else:
+                present.add(det.class_name)
+
+        return present, absent
 
     def _foot_in_zone(self, bbox: tuple[int, int, int, int], zone_id: str) -> bool:
         x1, _, x2, y2 = bbox
@@ -93,10 +119,20 @@ class RulesEngine:
         violations: list[Violation] = []
 
         for person in tracked:
-            ppe = self._ppe_present(person, detections)
+            ppe_present, ppe_absent = self._ppe_present(person, detections)
+
+            # A PPE item is "missing" if:
+            #   • the model fired an explicit no-* indicator for it, OR
+            #   • it simply wasn't detected inside the person's bbox.
+            # We use absent-set OR (required minus present) so either signal fires.
+            def _missing_ppe(required: list[str]) -> list[str]:
+                return [
+                    p for p in required
+                    if p in ppe_absent or p not in ppe_present
+                ]
 
             # Global PPE check
-            missing = [p for p in self._config.required_ppe if p not in ppe]
+            missing = _missing_ppe(self._config.required_ppe)
             if missing:
                 violations.append(Violation(
                     type="missing_ppe",
@@ -121,7 +157,7 @@ class RulesEngine:
                         zone_id=zone.id,
                     ))
                 elif zone.rule == "require_ppe":
-                    zone_missing = [p for p in zone.required_ppe if p not in ppe]
+                    zone_missing = _missing_ppe(zone.required_ppe)
                     if zone_missing:
                         violations.append(Violation(
                             type="missing_ppe",

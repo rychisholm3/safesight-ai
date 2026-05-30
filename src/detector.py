@@ -8,6 +8,45 @@ from ultralytics import YOLO
 
 logger = logging.getLogger(__name__)
 
+# ── Class name normalisation ──────────────────────────────────────────────────
+# The Roboflow construction-safety dataset uses mixed-case / spaced names.
+# Normalise to the lowercase canonical names the rules engine expects.
+_NAME_NORMALISE: dict[str, str] = {
+    # PPE present
+    "hardhat":          "hardhat",
+    "Hardhat":          "hardhat",
+    "safety vest":      "vest",
+    "Safety Vest":      "vest",
+    "vest":             "vest",
+    "gloves":           "gloves",
+    "Gloves":           "gloves",
+    "safety shoes":     "safety_shoes",
+    "Safety Shoes":     "safety_shoes",
+    "mask":             "mask",
+    "Mask":             "mask",
+    # PPE absent (explicit "no-PPE" classes from the dataset)
+    "no-hardhat":       "no-hardhat",
+    "NO-Hardhat":       "no-hardhat",
+    "no-safety vest":   "no-vest",
+    "NO-Safety Vest":   "no-vest",
+    "no-mask":          "no-mask",
+    "NO-Mask":          "no-mask",
+    # Persons
+    "person":           "person",
+    "Person":           "person",
+    "worker":           "person",
+    "Worker":           "person",
+    # Vehicles / equipment (keep lowercase)
+    "excavators":       "excavator",
+    "EXCAVATORS":       "excavator",
+    "dump truck":       "dump_truck",
+    "wheel loader":     "wheel_loader",
+}
+
+
+def _normalise(raw: str) -> str:
+    return _NAME_NORMALISE.get(raw, raw.lower())
+
 
 @dataclass
 class Detection:
@@ -21,8 +60,8 @@ class Detector:
     def __init__(
         self,
         model_path: str | Path = "yolo26s.pt",
-        confidence: float = 0.3,
-        imgsz: int = 1280,
+        confidence: float = 0.25,
+        imgsz: int = 640,
         sahi: bool = False,
         sahi_slice_wh: int = 640,
         sahi_overlap_wh: int = 100,
@@ -78,7 +117,7 @@ class Detector:
             detections.append(
                 Detection(
                     bbox=(int(x1), int(y1), int(x2), int(y2)),
-                    class_name=self._names.get(cls_id, str(cls_id)),
+                    class_name=_normalise(self._names.get(cls_id, str(cls_id))),
                     confidence=conf,
                     frame_id=frame_id,
                 )
@@ -102,7 +141,7 @@ class Detector:
                 detections.append(
                     Detection(
                         bbox=(int(x1), int(y1), int(x2), int(y2)),
-                        class_name=self._names[cls_id],
+                        class_name=_normalise(self._names[cls_id]),
                         confidence=float(conf),
                         frame_id=frame_id,
                     )

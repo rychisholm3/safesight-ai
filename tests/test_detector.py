@@ -103,11 +103,11 @@ class TestDetector:
         Detector(confidence=0.7, imgsz=640).detect(FRAME, frame_id=0)
         mock_yolo.return_value.assert_called_once_with(FRAME, conf=0.7, imgsz=640, verbose=False)
 
-    def test_imgsz_default_is_1280(self, mock_yolo: MagicMock) -> None:
+    def test_imgsz_default_is_640(self, mock_yolo: MagicMock) -> None:
         mock_yolo.return_value.return_value = [make_mock_result([])]
         Detector().detect(FRAME, frame_id=0)
         _, kwargs = mock_yolo.return_value.call_args
-        assert kwargs["imgsz"] == 1280
+        assert kwargs["imgsz"] == 640
 
 
 class TestDetectorSahi:

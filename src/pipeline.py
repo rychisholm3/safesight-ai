@@ -278,9 +278,9 @@ def _parse_args() -> argparse.Namespace:
                    help="SQLite database path")
     p.add_argument("--snapshots",  type=Path, default=Path("data/snapshots"),
                    help="Directory for violation snapshot JPEGs")
-    p.add_argument("--confidence", type=float, default=0.35,
+    p.add_argument("--confidence", type=float, default=0.25,
                    help="Detection confidence threshold")
-    p.add_argument("--imgsz",      type=int,   default=1280,
+    p.add_argument("--imgsz",      type=int,   default=640,
                    help="YOLO inference image size (larger = slower but catches distant workers)")
     p.add_argument("--sahi",       action="store_true",
                    help="Enable sliced inference — best for distant workers, costs ~3× FPS")
