@@ -140,21 +140,106 @@ Polygons are pixel coordinates in the source frame.
 
 ## Roadmap
 
+### Completed
 - [x] Project scaffolding, README, architecture
-- [x] Video source abstraction (file / webcam / RTSP)
+- [x] Video source abstraction (file / webcam / RTSP / IP camera)
 - [x] Threaded frame reader with bounded queue
-- [x] YOLO26 inference wrapper
-- [x] ByteTrack integration with persistent IDs
+- [x] YOLO26 inference wrapper + SAHI sliced inference for distant workers
+- [x] ByteTrack integration with persistent person IDs
 - [x] Rules engine: PPE checks
 - [x] Rules engine: zone intrusion (point-in-polygon)
 - [x] Per-ID event debouncing
 - [x] SQLite event store + snapshot writer
-- [x] FastAPI REST endpoints (events, zones, stats)
+- [x] FastAPI REST endpoints (events, zones, stats, health)
 - [x] WebSocket live event stream
 - [x] React dashboard: live view + event log
 - [x] React dashboard: zone editor (draw polygons on frame)
+- [x] Severity levels (CRITICAL / WARNING) on violations and events
+- [x] Webhook alerter with exponential-backoff retry
 - [x] Performance benchmarking (FPS on CPU vs GPU, model size tradeoff)
-- [x] Dockerfile for one-command deploy
+- [x] Dockerfile + docker-compose for one-command deploy
+- [x] Fine-tuning infrastructure (download dataset, train, benchmark)
+
+### Phase 1 — Authentication & Organisations
+- [ ] User model: email, hashed password, role, org_id
+- [ ] JWT auth endpoints: register, login, refresh
+- [ ] Organisations and sites tables (one org → many sites → many cameras)
+- [ ] RBAC: Safety Officer, Site Manager, Executive, Auditor
+- [ ] React auth flow: login/register pages, protected routes, role-aware nav
+
+### Phase 2 — Multi-Channel Notifications
+- [ ] Email alerts via SMTP / SendGrid (HTML template with snapshot embed)
+- [ ] SMS via Twilio
+- [ ] Slack via Incoming Webhooks (Block Kit card)
+- [ ] Microsoft Teams via Adaptive Cards
+- [ ] Per-user notification preferences (channels, minimum severity, quiet hours)
+- [ ] Alert deduplication (no repeat notifications for the same open event)
+- [ ] Dashboard settings page for configuring channels
+
+### Phase 3 — OSHA Rule Engine
+- [ ] OSHA regulation database (config/osha_rules.json): code, description, fine range, recommendation
+- [ ] Rule matcher: maps (violation_type, missing_ppe, zone_rule) → OSHA codes
+- [ ] Enrich events with osha_codes, fine_estimate_usd, recommendation
+- [ ] Violation detail panel: OSHA card, confidence %, annotated snapshot, plain-English explanation
+
+### Phase 4 — Explainability & Evidence
+- [ ] Confidence score propagated from detector through to API and dashboard
+- [ ] Reason breakdown: structured list of why a violation was flagged
+- [ ] Annotated snapshot viewer with bounding boxes per detection class
+- [ ] Plain-English explanation sentence generated per event
+
+### Phase 5 — Safety Timeline
+- [ ] Chronological timeline view grouped by hour (replaces flat event list)
+- [ ] Supervisor intervention notes (Site Manager role can add manual entries)
+- [ ] Timeline PDF export for compliance folders
+- [ ] Incident story: highlight violation runs by the same person
+
+### Phase 6 — Analytics & Safety Score
+- [ ] Analytics API: violations grouped by day/week/type/zone/worker
+- [ ] Safety score algorithm: per-category compliance rates → weighted composite 0–100
+- [ ] Safety score history table, recalculated nightly via background job
+- [ ] Analytics dashboard page: line chart (violations/day), bar chart (by type), safety score gauge
+- [ ] Trend analysis: flag week-over-week increases > 20%
+
+### Phase 7 — Heatmaps
+- [ ] Site map image upload per site (floor plan PNG/JPG)
+- [ ] Violation centroid coordinates stored per event
+- [ ] Server-side heatmap generation (Gaussian density overlay on site map)
+- [ ] Heatmap API endpoint returning PNG
+- [ ] Dashboard heatmap tab with colour key (red/yellow/green)
+
+### Phase 8 — Multi-Site Dashboard
+- [ ] Organisation overview: site cards with live violation count, safety score, status badge
+- [ ] Cross-site metrics: violations per worker, per site per day, org safety score
+- [ ] Site switcher in nav; all pages scope to selected site
+- [ ] Weekly org safety digest email across all sites
+
+### Phase 9 — Incident Resolution Workflow
+- [ ] Incident state machine: detected → assigned → investigating → resolved → closed
+- [ ] Assignment to users with Site Manager / Safety Officer role
+- [ ] Activity log: every status change recorded with timestamp and user
+- [ ] Resolution notes field
+- [ ] Workflow filters in dashboard
+- [ ] SLA tracking: configurable time-to-resolution targets per severity, overdue flags
+
+### Phase 10 — Extended Detection Categories
+- [ ] Vehicle detection: forklift, truck, excavator, scissor lift
+- [ ] Forklift-pedestrian proximity alert (CRITICAL when bboxes within N pixels)
+- [ ] Behaviour detection: running, climbing improperly
+- [ ] Fall detection: aspect-ratio heuristic + pose model; auto-triggers SMS
+- [ ] Hazard detection: open trench, unsecured ladder, scaffolding without guardrail
+- [ ] OSHA rules for new categories (1926.600 vehicles, 1926.502 fall protection)
+- [ ] Per-zone detection category config
+
+### Phase 11 — Production Infrastructure
+- [ ] PostgreSQL migration from SQLite (alembic migrations, asyncpg)
+- [ ] Redis pub/sub replacing in-process WebSocket broadcaster
+- [ ] Background job queue (arq) for nightly scores, weekly emails, heatmap generation
+- [ ] GitHub Actions CI: pytest + tsc on every PR; Docker image push on merge
+- [ ] Cloud deployment: separate containers for api, worker, frontend, postgres, redis
+- [ ] Prometheus metrics + Grafana dashboard
+- [ ] S3-compatible snapshot storage with signed URLs
+- [ ] Per-organisation API keys and rate limiting
 
 ## License
 
