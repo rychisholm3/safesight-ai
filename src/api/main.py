@@ -1,15 +1,25 @@
+import asyncio
 import json
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.staticfiles import StaticFiles
 
+from src.api.ws import broadcaster, websocket_endpoint
 from src.store import EventStore
 
-app = FastAPI(title="SafeSight AI", version="0.1.0")
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    broadcaster.set_loop(asyncio.get_running_loop())
+    yield
+
+
+app = FastAPI(title="SafeSight AI", version="0.1.0", lifespan=_lifespan)
 
 # ---------------------------------------------------------------------------
 # Config from environment (with sensible defaults)
@@ -72,6 +82,12 @@ def get_event(event_id: str, store: StoreDep):
     if match is None:
         raise HTTPException(status_code=404, detail=f"Event {event_id!r} not found")
     return match
+
+
+@app.websocket("/ws/events")
+async def ws_events(ws: WebSocket, store: StoreDep):
+    history = store.get_events(limit=20)
+    await websocket_endpoint(ws, history)
 
 
 @app.get("/stats")
