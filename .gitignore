@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Model weights and benchmark output (downloaded at runtime)
+*.pt
+benchmark_results.json
+
+# App data (generated at runtime)
+data/events.db
+data/snapshots/

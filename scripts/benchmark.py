@@ -1,5 +1,9 @@
 """
-Performance benchmark: measures per-stage and full-pipeline FPS across model sizes.
+Performance benchmark: measures per-stage and full-pipeline FPS across YOLO26 model sizes.
+
+YOLO26 is Ultralytics' edge-optimised detector — 43% faster CPU inference than YOLOv8,
+NMS-free design, and improved small-object detection via ProgLoss + STAL. All variants
+auto-download from Ultralytics on first run.
 
 Usage:
     # Synthetic frames (no video needed)
@@ -9,7 +13,7 @@ Usage:
     python scripts/benchmark.py --source data/input_videos/sample.mp4
 
     # Single model, custom resolution
-    python scripts/benchmark.py --models yolov8n --width 640 --height 480
+    python scripts/benchmark.py --models yolo26n --width 640 --height 480
 
     # More frames for stable numbers
     python scripts/benchmark.py --frames 200 --warmup 10
@@ -33,7 +37,7 @@ from src.tracker import Tracker
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("benchmark")
 
-DEFAULT_MODELS = ["yolov8n.pt", "yolov8s.pt", "yolov8m.pt"]
+DEFAULT_MODELS = ["yolo26n.pt", "yolo26s.pt", "yolo26m.pt"]
 WARMUP_FRAMES  = 5
 
 
