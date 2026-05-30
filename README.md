@@ -148,8 +148,8 @@ Polygons are pixel coordinates in the source frame.
 - [x] Rules engine: PPE checks
 - [x] Rules engine: zone intrusion (point-in-polygon)
 - [x] Per-ID event debouncing
-- [ ] SQLite event store + snapshot writer
-- [ ] FastAPI REST endpoints (events, zones, stats)
+- [x] SQLite event store + snapshot writer
+- [x] FastAPI REST endpoints (events, zones, stats)
 - [ ] WebSocket live event stream
 - [ ] React dashboard: live view + event log
 - [ ] React dashboard: zone editor (draw polygons on frame)
