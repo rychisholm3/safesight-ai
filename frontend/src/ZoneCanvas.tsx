@@ -1,12 +1,13 @@
 /**
- * ZoneCanvas — SVG-based polygon drawing component.
+ * ZoneCanvas — SVG-based interactive polygon zone editor.
  *
- * Interactions:
- *  • Click canvas (drawing mode)  → add vertex
- *  • Hover near first vertex (≥3 pts) → snap indicator; click to close polygon
- *  • After closing → inline form to name the zone and pick its type
- *  • Drag any vertex of a completed zone → reposition it
- *  • Undo / Cancel buttons during drawing
+ * Fully guided interactions:
+ *  • Instructional overlay when no zones exist (disappears when drawing starts)
+ *  • Live step banner during drawing ("Place 2 more corners…")
+ *  • Click to place vertices; first vertex glows green when you can close the shape
+ *  • Click the green first vertex to close and open the naming form
+ *  • Drag any corner handle on a finished zone to fine-tune its shape
+ *  • Undo last point or cancel drawing at any time
  */
 import { useEffect, useRef, useState } from "react";
 
@@ -17,7 +18,7 @@ export interface DrawnZone {
   name: string;
   rule: "no_entry" | "require_ppe";
   required_ppe: string[];
-  points: [number, number][];  // natural-image pixel coordinates
+  points: [number, number][];  // natural image pixel coordinates
 }
 
 interface Props {
@@ -26,30 +27,26 @@ interface Props {
   onZonesChange: (zones: DrawnZone[]) => void;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Visual constants ──────────────────────────────────────────────────────────
 
-const SNAP_PX   = 16;   // SVG-space pixels to snap to first vertex
+const SNAP_PX = 18;
 
-const ZONE_FILL: Record<string, string> = {
-  no_entry:    "#ef444433",
-  require_ppe: "#f59e0b33",
+const COLORS: Record<string, { fill: string; stroke: string; label: string }> = {
+  no_entry:    { fill: "#ef444428", stroke: "#ef4444", label: "🚫 NO ENTRY"     },
+  require_ppe: { fill: "#f59e0b28", stroke: "#f59e0b", label: "⚠ REQUIRE PPE"  },
 };
-const ZONE_STROKE: Record<string, string> = {
-  no_entry:    "#ef4444",
-  require_ppe: "#f59e0b",
-};
+const FALLBACK = { fill: "#3b82f628", stroke: "#3b82f6", label: "ZONE" };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── SVG coordinate helper ─────────────────────────────────────────────────────
 
 function svgPt(e: MouseEvent, svg: SVGSVGElement): [number, number] {
   const p = svg.createSVGPoint();
-  p.x = e.clientX;
-  p.y = e.clientY;
+  p.x = e.clientX; p.y = e.clientY;
   const t = p.matrixTransform(svg.getScreenCTM()!.inverse());
   return [t.x, t.y];
 }
 
-function dist(a: [number, number], b: [number, number]) {
+function dist2(a: [number, number], b: [number, number]) {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
 
@@ -60,7 +57,7 @@ function centroid(pts: [number, number][]): [number, number] {
   ];
 }
 
-function ptsAttr(pts: [number, number][]) {
+function polyAttr(pts: [number, number][]) {
   return pts.map(([x, y]) => `${x},${y}`).join(" ");
 }
 
@@ -68,398 +65,392 @@ function ptsAttr(pts: [number, number][]) {
 
 type Mode = "idle" | "drawing" | "pending";
 
-interface PendingForm {
-  name: string;
-  rule: "no_entry" | "require_ppe";
-  ppe: string;
-}
+interface NamingForm { name: string; rule: "no_entry" | "require_ppe"; ppe: string }
 
 export function ZoneCanvas({ imageUrl, zones, onZonesChange }: Props) {
-  const svgRef  = useRef<SVGSVGElement>(null);
-  const imgRef  = useRef<HTMLImageElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  const [naturalW, setNaturalW] = useState(1920);
-  const [naturalH, setNaturalH] = useState(1080);
+  const [nw, setNw] = useState(1920);
+  const [nh, setNh] = useState(1080);
   const [mode,       setMode]       = useState<Mode>("idle");
   const [currentPts, setCurrentPts] = useState<[number, number][]>([]);
   const [mousePos,   setMousePos]   = useState<[number, number]>([0, 0]);
   const [pendingPts, setPendingPts] = useState<[number, number][]>([]);
-  const [form, setForm] = useState<PendingForm>({ name: "", rule: "no_entry", ppe: "" });
-
-  // For window-level drag tracking
+  const [form, setForm] = useState<NamingForm>({ name: "", rule: "no_entry", ppe: "" });
   const [dragTarget, setDragTarget] = useState<{ zi: number; pi: number } | null>(null);
-  const dragRef   = useRef(dragTarget);   dragRef.current   = dragTarget;
-  const zonesRef  = useRef(zones);        zonesRef.current  = zones;
-  const svgRefCb  = useRef(svgRef);       svgRefCb.current  = svgRef;
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // ── Natural dimensions ──────────────────────────────────────────────────────
+  const dragRef  = useRef(dragTarget); dragRef.current  = dragTarget;
+  const zonesRef = useRef(zones);      zonesRef.current = zones;
+  const svgCbRef = useRef(svgRef);     svgCbRef.current = svgRef;
+
+  // ── Natural image size ──────────────────────────────────────────────────────
   useEffect(() => {
     const img = imgRef.current;
     if (!img) return;
-    const onLoad = () => {
-      if (img.naturalWidth > 0) {
-        setNaturalW(img.naturalWidth);
-        setNaturalH(img.naturalHeight);
-      }
-    };
-    if (img.complete && img.naturalWidth > 0) onLoad();
-    img.addEventListener("load", onLoad);
-    return () => img.removeEventListener("load", onLoad);
+    const apply = () => { if (img.naturalWidth > 0) { setNw(img.naturalWidth); setNh(img.naturalHeight); } };
+    if (img.complete) apply();
+    img.addEventListener("load", apply);
+    return () => img.removeEventListener("load", apply);
   }, [imageUrl]);
 
-  // ── Window-level drag ───────────────────────────────────────────────────────
+  // ── Window-level drag (so dragging outside SVG still works) ────────────────
   useEffect(() => {
     if (!dragTarget) return;
-
     const onMove = (e: MouseEvent) => {
-      const svg = svgRefCb.current.current;
+      const svg = svgCbRef.current.current;
       const dt  = dragRef.current;
       if (!svg || !dt) return;
       const [x, y] = svgPt(e, svg);
-      onZonesChange(
-        zonesRef.current.map((z, i) =>
-          i === dt.zi
-            ? { ...z, points: z.points.map((p, j) => j === dt.pi ? [Math.round(x), Math.round(y)] as [number, number] : p) }
-            : z
-        )
-      );
+      onZonesChange(zonesRef.current.map((z, i) =>
+        i !== dt.zi ? z : {
+          ...z,
+          points: z.points.map((p, j) =>
+            j === dt.pi ? [Math.round(x), Math.round(y)] as [number, number] : p
+          ),
+        }
+      ));
     };
     const onUp = () => setDragTarget(null);
-
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup",   onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup",   onUp);
-    };
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
   }, [dragTarget, onZonesChange]);
 
-  // ── SVG mouse handlers ──────────────────────────────────────────────────────
-  function onSvgMouseMove(e: React.MouseEvent<SVGSVGElement>) {
-    if (!svgRef.current) return;
-    setMousePos(svgPt(e.nativeEvent, svgRef.current));
-  }
-
+  // ── SVG interaction ─────────────────────────────────────────────────────────
   function onSvgClick(e: React.MouseEvent<SVGSVGElement>) {
     if (mode !== "drawing" || !svgRef.current) return;
     const [x, y] = svgPt(e.nativeEvent, svgRef.current);
-
-    // Close polygon?
-    if (currentPts.length >= 3 && dist([x, y], currentPts[0]) < SNAP_PX) {
+    if (currentPts.length >= 3 && dist2([x, y], currentPts[0]) < SNAP_PX) {
       setPendingPts(currentPts);
       setCurrentPts([]);
       setMode("pending");
       return;
     }
-    setCurrentPts((p) => [...p, [x, y]]);
+    setCurrentPts(p => [...p, [x, y]]);
   }
 
-  // ── Drawing controls ────────────────────────────────────────────────────────
-  function startDrawing() {
-    setCurrentPts([]);
-    setMode("drawing");
-  }
-  function cancelDrawing() {
-    setCurrentPts([]);
-    setMode("idle");
-  }
-  function undoPoint() {
-    setCurrentPts((p) => p.slice(0, -1));
+  function onSvgMouseMove(e: React.MouseEvent<SVGSVGElement>) {
+    if (!svgRef.current) return;
+    setMousePos(svgPt(e.nativeEvent, svgRef.current));
   }
 
-  // ── Confirm / discard pending polygon ───────────────────────────────────────
+  // ── Actions ─────────────────────────────────────────────────────────────────
+  function startDrawing() { setCurrentPts([]); setMode("drawing"); }
+  function cancelDrawing() { setCurrentPts([]); setMode("idle"); }
+  function undoPoint()    { setCurrentPts(p => p.slice(0, -1)); }
+
   function confirmZone() {
     if (!form.name.trim()) return;
     const zone: DrawnZone = {
-      id:            `zone_${Date.now()}`,
-      name:          form.name.trim(),
-      rule:          form.rule,
-      required_ppe:  form.rule === "require_ppe"
-                       ? form.ppe.split(",").map((s) => s.trim()).filter(Boolean)
-                       : [],
-      points:        pendingPts,
+      id:           `zone_${Date.now()}`,
+      name:         form.name.trim(),
+      rule:         form.rule,
+      required_ppe: form.rule === "require_ppe"
+                      ? form.ppe.split(",").map(s => s.trim()).filter(Boolean)
+                      : [],
+      points:       pendingPts,
     };
     onZonesChange([...zones, zone]);
     setPendingPts([]);
     setForm({ name: "", rule: "no_entry", ppe: "" });
     setMode("idle");
-  }
-  function discardPending() {
-    setPendingPts([]);
-    setMode("idle");
+    setSuccessMsg(`"${zone.name}" saved! You can draw another zone or continue.`);
+    setTimeout(() => setSuccessMsg(null), 4000);
   }
 
-  function removeZone(i: number) {
-    onZonesChange(zones.filter((_, j) => j !== i));
-  }
+  function discardPending() { setPendingPts([]); setMode("idle"); }
+  function removeZone(i: number) { onZonesChange(zones.filter((_, j) => j !== i)); }
 
   // ── Derived ─────────────────────────────────────────────────────────────────
-  const nearFirst =
-    mode === "drawing" &&
-    currentPts.length >= 3 &&
-    dist(mousePos, currentPts[0]) < SNAP_PX;
+  const nearFirst = mode === "drawing" && currentPts.length >= 3
+    && dist2(mousePos, currentPts[0]) < SNAP_PX;
 
-  const labelFontSize = Math.max(naturalW * 0.018, 14);
-  const vertexR       = Math.max(naturalW * 0.004, 6);
-  const strokeW       = Math.max(naturalW * 0.002, 2.5);
+  const vr  = Math.max(nw * 0.004, 7);   // vertex radius
+  const sw  = Math.max(nw * 0.002, 2.5); // stroke width
+  const fs  = Math.max(nw * 0.018, 14);  // font size
+
+  const drawingBanner = (() => {
+    if (currentPts.length === 0) return "Click anywhere on the image to place your first corner";
+    if (currentPts.length === 1) return "Click to place more corners — you need at least 3";
+    if (currentPts.length === 2) return "One more corner needed before you can close the zone";
+    return nearFirst
+      ? "Click the green circle to close and finish the zone ✓"
+      : "Keep adding corners — or click the green first corner to close the zone";
+  })();
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div>
-      {/* ── Canvas ── */}
+      {/* ── Canvas wrapper ── */}
       <div style={{
         position: "relative",
         width: "100%",
-        aspectRatio: `${naturalW} / ${naturalH}`,
+        aspectRatio: `${nw} / ${nh}`,
         background: "#0f172a",
         borderRadius: 8,
         overflow: "hidden",
         cursor: mode === "drawing" ? "crosshair" : dragTarget ? "grabbing" : "default",
         userSelect: "none",
+        border: mode === "drawing" ? "2px solid #f97316" : "2px solid transparent",
+        transition: "border-color .2s",
       }}>
         <img
           ref={imgRef}
           src={imageUrl}
           draggable={false}
           style={{ width: "100%", height: "100%", display: "block", objectFit: "fill" }}
-          alt="Camera view"
+          alt="Camera / video view"
         />
 
+        {/* ── SVG overlay ── */}
         <svg
           ref={svgRef}
-          viewBox={`0 0 ${naturalW} ${naturalH}`}
+          viewBox={`0 0 ${nw} ${nh}`}
           preserveAspectRatio="none"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
           onClick={onSvgClick}
           onMouseMove={onSvgMouseMove}
         >
-          {/* ── Completed zones ── */}
+          {/* Completed zones */}
           {zones.map((zone, zi) => {
-            const fill   = ZONE_FILL[zone.rule]   ?? "#3b82f633";
-            const stroke = ZONE_STROKE[zone.rule] ?? "#3b82f6";
+            const c = COLORS[zone.rule] ?? FALLBACK;
             const [cx, cy] = centroid(zone.points);
             return (
               <g key={zone.id}>
-                <polygon
-                  points={ptsAttr(zone.points)}
-                  fill={fill}
-                  stroke={stroke}
-                  strokeWidth={strokeW}
-                />
-                {/* Draggable vertex handles */}
+                <polygon points={polyAttr(zone.points)} fill={c.fill} stroke={c.stroke} strokeWidth={sw} />
                 {zone.points.map(([x, y], pi) => (
                   <circle
-                    key={pi}
-                    cx={x} cy={y} r={vertexR * 1.4}
-                    fill={stroke}
-                    stroke="#fff"
-                    strokeWidth={strokeW * 0.7}
+                    key={pi} cx={x} cy={y} r={vr * 1.5}
+                    fill={c.stroke} stroke="#fff" strokeWidth={sw * 0.7}
                     style={{ cursor: "grab", pointerEvents: "all" }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      setDragTarget({ zi, pi });
-                    }}
+                    onMouseDown={e => { e.stopPropagation(); setDragTarget({ zi, pi }); }}
                   />
                 ))}
-                {/* Zone label */}
-                <text
-                  x={cx} y={cy}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="#fff"
-                  fontSize={labelFontSize}
-                  fontWeight="bold"
-                  style={{ pointerEvents: "none", filter: "drop-shadow(0 1px 3px rgba(0,0,0,.9))" }}
-                >
+                <text x={cx} y={cy - fs * 0.6} textAnchor="middle" dominantBaseline="middle"
+                  fill="#fff" fontSize={fs} fontWeight="bold"
+                  style={{ pointerEvents: "none", filter: "drop-shadow(0 1px 3px rgba(0,0,0,.95))" }}>
                   {zone.name}
                 </text>
-                <text
-                  x={cx} y={cy + labelFontSize * 1.3}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill={stroke}
-                  fontSize={labelFontSize * 0.72}
-                  fontWeight="600"
-                  style={{ pointerEvents: "none", filter: "drop-shadow(0 1px 2px rgba(0,0,0,.9))" }}
-                >
-                  {zone.rule === "no_entry" ? "⛔ NO ENTRY" : "⚠ REQUIRE PPE"}
+                <text x={cx} y={cy + fs * 0.85} textAnchor="middle" dominantBaseline="middle"
+                  fill={c.stroke} fontSize={fs * 0.68} fontWeight="600"
+                  style={{ pointerEvents: "none", filter: "drop-shadow(0 1px 2px rgba(0,0,0,.95))" }}>
+                  {c.label}
                 </text>
               </g>
             );
           })}
 
-          {/* ── Pending (closed, awaiting naming) ── */}
-          {pendingPts.length >= 3 && (
-            <polygon
-              points={ptsAttr(pendingPts)}
-              fill={ZONE_FILL[form.rule] ?? "#3b82f633"}
-              stroke={ZONE_STROKE[form.rule] ?? "#3b82f6"}
-              strokeWidth={strokeW}
-              strokeDasharray={`${strokeW * 4} ${strokeW * 2}`}
-            />
-          )}
+          {/* Closed polygon awaiting naming */}
+          {pendingPts.length >= 3 && (() => {
+            const c = COLORS[form.rule] ?? FALLBACK;
+            return <polygon points={polyAttr(pendingPts)} fill={c.fill} stroke={c.stroke}
+              strokeWidth={sw} strokeDasharray={`${sw * 4} ${sw * 2}`} />;
+          })()}
 
-          {/* ── Active drawing polyline + rubber-band ── */}
+          {/* Active drawing */}
           {mode === "drawing" && currentPts.length > 0 && (
             <g style={{ pointerEvents: "none" }}>
               <polyline
-                points={ptsAttr([...currentPts, mousePos])}
-                fill="none"
-                stroke="#f97316"
-                strokeWidth={strokeW}
-                strokeDasharray={`${strokeW * 4} ${strokeW * 2}`}
+                points={polyAttr([...currentPts, mousePos])}
+                fill="none" stroke="#f97316" strokeWidth={sw}
+                strokeDasharray={`${sw * 4} ${sw * 2}`}
               />
               {currentPts.map(([x, y], i) => {
-                const isFirst = i === 0;
-                const snap    = isFirst && nearFirst;
+                const snap = i === 0 && nearFirst;
                 return (
-                  <circle
-                    key={i}
-                    cx={x} cy={y}
-                    r={snap ? vertexR * 2.2 : vertexR}
+                  <circle key={i} cx={x} cy={y}
+                    r={snap ? vr * 2.4 : vr}
                     fill={snap ? "#22c55e" : "#f97316"}
-                    stroke="#fff"
-                    strokeWidth={strokeW * 0.7}
-                    style={{ transition: "r .1s, fill .1s" }}
+                    stroke="#fff" strokeWidth={sw * 0.7}
+                    style={{ transition: "r .12s, fill .12s" }}
                   />
                 );
               })}
-              {/* "Close zone" tooltip near first point */}
               {nearFirst && (
-                <text
-                  x={currentPts[0][0] + vertexR * 3}
-                  y={currentPts[0][1] - vertexR * 2}
-                  fill="#22c55e"
-                  fontSize={labelFontSize * 0.85}
-                  fontWeight="bold"
-                  style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,.9))" }}
-                >
-                  ✓ Close zone
+                <text x={currentPts[0][0] + vr * 3.5} y={currentPts[0][1] - vr * 2}
+                  fill="#22c55e" fontSize={fs * 0.85} fontWeight="bold"
+                  style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,.95))" }}>
+                  ✓ Click to close
                 </text>
               )}
             </g>
           )}
         </svg>
+
+        {/* ── Idle instruction overlay (only when no zones yet) ── */}
+        {mode === "idle" && zones.length === 0 && (
+          <div style={{
+            position: "absolute", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "rgba(0,0,0,0.78)",
+            borderRadius: 12, padding: "18px 22px",
+            color: "#fff", maxWidth: "60%", minWidth: 260,
+            pointerEvents: "none",
+            backdropFilter: "blur(3px)",
+          }}>
+            <div style={{ fontSize: 24, textAlign: "center", marginBottom: 10 }}>📐</div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, textAlign: "center" }}>
+              No zones yet
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7, fontSize: 12, color: "#cbd5e1" }}>
+              <div><span style={{ color: "#f97316", fontWeight: 700 }}>1.</span> Click <strong style={{ color: "#fff" }}>+ Draw Zone</strong> below</div>
+              <div><span style={{ color: "#f97316", fontWeight: 700 }}>2.</span> Click the image to place corners</div>
+              <div><span style={{ color: "#f97316", fontWeight: 700 }}>3.</span> Click the <span style={{ color: "#22c55e", fontWeight: 700 }}>● green</span> first corner to close</div>
+              <div><span style={{ color: "#94a3b8", fontWeight: 700 }}>✏</span> Drag corners afterwards to fine-tune</div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Drawing mode banner (top of canvas) ── */}
+        {mode === "drawing" && (
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0,
+            background: "rgba(249,115,22,0.93)",
+            color: "#fff", padding: "9px 16px",
+            fontSize: 13, fontWeight: 600,
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <span style={{ animation: "pulse 1.2s ease-in-out infinite", fontSize: 10 }}>●</span>
+            {drawingBanner}
+          </div>
+        )}
+
+        {/* ── Success toast ── */}
+        {successMsg && (
+          <div style={{
+            position: "absolute", bottom: 12, left: "50%",
+            transform: "translateX(-50%)",
+            background: "#059669", color: "#fff",
+            borderRadius: 8, padding: "8px 16px",
+            fontSize: 13, fontWeight: 600,
+            boxShadow: "0 4px 12px rgba(0,0,0,.3)",
+            animation: "fadeIn .3s ease",
+            whiteSpace: "nowrap",
+          }}>
+            ✓ {successMsg}
+          </div>
+        )}
       </div>
 
-      {/* ── Controls bar ── */}
+      {/* ── Controls below canvas ── */}
       <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         {mode === "idle" && (
-          <button onClick={startDrawing} style={btn("#1a1a2e", "#fff")}>
+          <button onClick={startDrawing} style={BT("#1a1a2e", "#fff")}>
             + Draw Zone
           </button>
         )}
-
         {mode === "drawing" && (
           <>
-            <button onClick={cancelDrawing} style={btn("#6b7280", "#fff")}>Cancel</button>
-            <button
-              onClick={undoPoint}
-              disabled={currentPts.length === 0}
-              style={{ ...btn("#374151", "#fff"), opacity: currentPts.length === 0 ? 0.4 : 1 }}
-            >
-              ↩ Undo
+            <button onClick={undoPoint} disabled={currentPts.length === 0}
+              style={{ ...BT("#374151", "#fff"), opacity: currentPts.length ? 1 : 0.4 }}>
+              ↩ Undo last point
             </button>
-            <span style={{ fontSize: 12, color: "#6b7280" }}>
-              {currentPts.length === 0
-                ? "Click the image to place your first corner"
-                : currentPts.length < 3
-                  ? `${3 - currentPts.length} more corner${3 - currentPts.length > 1 ? "s" : ""} needed to close`
-                  : "Click another corner — or click the first corner (green) to close the zone"}
-            </span>
+            <button onClick={cancelDrawing} style={BT("#6b7280", "#fff")}>
+              Cancel
+            </button>
           </>
+        )}
+        {(mode === "drawing" || mode === "pending") && zones.length === 0 && mode !== "pending" && (
+          <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 4 }}>
+            Tip: you can draw as many zones as you need
+          </span>
+        )}
+        {mode === "idle" && zones.length > 0 && (
+          <span style={{ fontSize: 12, color: "#6b7280" }}>
+            Drag any orange/red corner to reposition it
+          </span>
         )}
       </div>
 
-      {/* ── Naming form (after polygon closed) ── */}
+      {/* ── Naming form (inline, after polygon is closed) ── */}
       {mode === "pending" && (
         <div style={{
-          marginTop: 12, padding: "14px 16px",
+          marginTop: 12, padding: "16px 18px",
           background: "#f0fdf4", borderRadius: 8, border: "1px solid #86efac",
         }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: "#15803d" }}>
-            ✓ Zone shape drawn — give it a name
+          <div style={{ fontWeight: 700, fontSize: 14, color: "#15803d", marginBottom: 12 }}>
+            ✓ Shape drawn! Give this zone a name and type.
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <label style={lbl}>Zone name</label>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <FormField label="Zone name" hint='e.g. "Scaffolding Area" or "Site Entrance"'>
               <input
                 autoFocus
-                placeholder="e.g. Forklift Lane"
+                placeholder='e.g. Scaffolding Area'
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                onKeyDown={(e) => e.key === "Enter" && confirmZone()}
-                style={inp}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                onKeyDown={e => e.key === "Enter" && confirmZone()}
+                style={INP}
               />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <label style={lbl}>Zone type</label>
+            </FormField>
+            <FormField label="Zone type" hint="What rule applies inside this zone?">
               <select
                 value={form.rule}
-                onChange={(e) => setForm((f) => ({ ...f, rule: e.target.value as PendingForm["rule"] }))}
-                style={{ ...inp, width: "auto" }}
+                onChange={e => setForm(f => ({ ...f, rule: e.target.value as NamingForm["rule"] }))}
+                style={{ ...INP, width: "auto" }}
               >
-                <option value="no_entry">🚫 No Entry — alert anyone inside</option>
-                <option value="require_ppe">⚠️ Require PPE — alert if gear is missing</option>
+                <option value="no_entry">🚫 No Entry — alert anyone inside, no exceptions</option>
+                <option value="require_ppe">⚠️ Require PPE — alert if specific gear is missing</option>
               </select>
-            </div>
+            </FormField>
             {form.rule === "require_ppe" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <label style={lbl}>Required PPE (comma-separated)</label>
+              <FormField label="Required PPE" hint='Comma-separated, e.g. "hardhat, vest, face_shield"'>
                 <input
                   placeholder="hardhat, vest"
                   value={form.ppe}
-                  onChange={(e) => setForm((f) => ({ ...f, ppe: e.target.value }))}
-                  style={inp}
+                  onChange={e => setForm(f => ({ ...f, ppe: e.target.value }))}
+                  style={INP}
                 />
-              </div>
+              </FormField>
             )}
-            <button
-              onClick={confirmZone}
-              disabled={!form.name.trim()}
-              style={{ ...btn("#059669", "#fff"), opacity: form.name.trim() ? 1 : 0.4 }}
-            >
-              Add Zone
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button onClick={confirmZone} disabled={!form.name.trim()}
+              style={{ ...BT("#059669", "#fff"), opacity: form.name.trim() ? 1 : 0.5 }}>
+              Save Zone
             </button>
-            <button onClick={discardPending} style={btn("#dc2626", "#fff")}>
-              Discard
+            <button onClick={discardPending} style={BT("#dc2626", "#fff")}>
+              Discard shape
             </button>
           </div>
         </div>
       )}
 
       {/* ── Zone list ── */}
-      {zones.length > 0 && (
+      {zones.length > 0 && mode !== "pending" && (
         <div style={{ marginTop: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-            {zones.length} zone{zones.length !== 1 ? "s" : ""} configured
-            <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 8 }}>
-              — drag corners on the image to fine-tune
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ background: "#1a1a2e", color: "#fff", borderRadius: "50%", width: 20, height: 20, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>
+              {zones.length}
+            </span>
+            Zone{zones.length > 1 ? "s" : ""} configured
+            <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 4, fontSize: 11 }}>
+              — drag any corner handle to fine-tune the shape
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {zones.map((z, i) => {
-              const col = ZONE_STROKE[z.rule] ?? "#3b82f6";
+              const c = COLORS[z.rule] ?? FALLBACK;
               return (
                 <div key={z.id} style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "7px 12px", background: "#f9fafb",
-                  borderRadius: 6, borderLeft: `3px solid ${col}`,
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "8px 12px", background: "#fff",
+                  borderRadius: 7, borderLeft: `3px solid ${c.stroke}`,
+                  boxShadow: "0 1px 3px rgba(0,0,0,.06)",
                 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: c.stroke, flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
-                    <span style={{ fontWeight: 600, fontSize: 13 }}>{z.name}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>{z.name}</span>
                     <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 8 }}>
                       {z.rule === "no_entry"
-                        ? "🚫 No entry — anyone inside triggers alert"
-                        : `⚠️ Requires: ${z.required_ppe.length ? z.required_ppe.join(", ") : "hardhat, vest"}`}
+                        ? "No entry — CRITICAL alert for anyone inside"
+                        : `Requires: ${z.required_ppe.length ? z.required_ppe.join(", ") : "hardhat, vest"}`}
                       {" · "}{z.points.length} corners
                     </span>
                   </div>
-                  <button
-                    onClick={() => removeZone(i)}
-                    title="Remove zone"
-                    style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 2px" }}
-                  >
+                  <button onClick={() => removeZone(i)} title="Delete zone"
+                    style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 4px" }}>
                     ×
                   </button>
                 </div>
@@ -472,21 +463,22 @@ export function ZoneCanvas({ imageUrl, zones, onZonesChange }: Props) {
   );
 }
 
-// ── Tiny style helpers ────────────────────────────────────────────────────────
-// (intentionally minimal to avoid pulling in a CSS-in-JS library)
+// ── Tiny helpers ──────────────────────────────────────────────────────────────
 
-function btn(bg: string, color: string): React.CSSProperties {
-  return {
-    padding: "7px 16px", borderRadius: 6, border: "none",
-    background: bg, color, fontWeight: 600, fontSize: 13,
-    cursor: "pointer", whiteSpace: "nowrap" as const,
-  };
+function FormField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <label style={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>{label}</label>
+      {children}
+      {hint && <span style={{ fontSize: 10, color: "#9ca3af" }}>{hint}</span>}
+    </div>
+  );
 }
 
-const lbl: React.CSSProperties = {
-  fontSize: 11, fontWeight: 600, color: "#374151",
-};
-const inp: React.CSSProperties = {
-  padding: "6px 10px", borderRadius: 6,
-  border: "1px solid #d1d5db", fontSize: 13, minWidth: 180,
+function BT(bg: string, color: string): React.CSSProperties {
+  return { padding: "7px 16px", borderRadius: 6, border: "none", background: bg, color, fontWeight: 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" as const };
+}
+
+const INP: React.CSSProperties = {
+  padding: "7px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13, minWidth: 200,
 };

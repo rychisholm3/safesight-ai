@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SafeSight AI</title>
     <style>
-      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes spin    { to { transform: rotate(360deg); } }
+      @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+      @keyframes fadeIn  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
     </style>
   </head>
   <body>

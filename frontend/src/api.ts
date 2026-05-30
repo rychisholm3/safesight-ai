@@ -235,3 +235,30 @@ export async function fetchCameraSnapshot(index: number): Promise<string> {
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 }
+
+export interface VideoFileInfo {
+  path: string;
+  name: string;
+  filename: string;
+  duration_s: number;
+  width: number;
+  height: number;
+}
+
+export async function fetchVideoFiles(): Promise<VideoFileInfo[]> {
+  const res = await apiFetch("/cameras/video-files");
+  if (!res.ok) throw new Error("Failed to list video files");
+  return res.json();
+}
+
+/** Fetch a representative JPEG frame from a video file and return a blob: URL. */
+export async function fetchVideoSnapshot(videoPath: string): Promise<string> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const qs = new URLSearchParams({ path: videoPath });
+  const res = await fetch(`${BASE}/cameras/video-snapshot?${qs}`, { headers });
+  if (!res.ok) throw new Error(`Video snapshot for "${videoPath}" failed`);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
