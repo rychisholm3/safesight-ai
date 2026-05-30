@@ -1,0 +1,24 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      SAFESIGHT_DB: data/events.db
+      SAFESIGHT_SNAPSHOTS: data/snapshots
+      SAFESIGHT_ZONES: config/zones.json
+      # No CORS needed — nginx proxies same-origin in Docker
+      SAFESIGHT_CORS_ORIGINS: ""
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./models:/app/models
+    expose:
+      - "8000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api

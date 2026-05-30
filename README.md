@@ -154,7 +154,7 @@ Polygons are pixel coordinates in the source frame.
 - [x] React dashboard: live view + event log
 - [x] React dashboard: zone editor (draw polygons on frame)
 - [x] Performance benchmarking (FPS on CPU vs GPU, model size tradeoff)
-- [ ] Dockerfile for one-command deploy
+- [x] Dockerfile for one-command deploy
 
 ## License
 

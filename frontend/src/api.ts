@@ -1,7 +1,10 @@
 import type { SafeEvent, Stats, ZonesConfig } from "./types";
 
-const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-export const WS_URL = BASE.replace(/^http/, "ws") + "/ws/events";
+// Empty string → relative URLs (nginx proxy in Docker). Explicit URL → local dev.
+const BASE = import.meta.env.VITE_API_URL ?? "";
+export const WS_URL = BASE
+  ? BASE.replace(/^http/, "ws") + "/ws/events"
+  : `ws://${window.location.host}/ws/events`;
 
 export async function fetchEvents(params?: {
   event_type?: string;

@@ -22,9 +22,10 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(title="SafeSight AI", version="0.1.0", lifespan=_lifespan)
 
+_cors_origins = os.environ.get("SAFESIGHT_CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
