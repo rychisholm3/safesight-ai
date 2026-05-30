@@ -16,12 +16,19 @@ from src.auth.db import AuthDB
 from src.auth.dependencies import require_auth
 from src.auth.models import User
 from src.auth.router import router as auth_router
+from src.notifications.channels.email_channel import EmailConfig
+from src.notifications.channels.sms_channel import TwilioConfig
+from src.notifications.db import NotificationDB
+from src.notifications.dispatcher import NotificationDispatcher
+from src.notifications.router import _get_notification_db
+from src.notifications.router import router as notifications_router
 from src.store import EventStore
 
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     broadcaster.set_loop(asyncio.get_running_loop())
+    broadcaster.set_dispatcher(_notification_dispatcher)
     yield
 
 
@@ -57,12 +64,24 @@ _shared_conn: sqlite3.Connection = sqlite3.connect(
 )
 _shared_conn.row_factory = sqlite3.Row
 
-_store: EventStore = EventStore(db_path=_DB_PATH, snapshot_dir=_SNAPSHOT_DIR)
-auth_db: AuthDB    = AuthDB(_shared_conn)
+_store: EventStore       = EventStore(db_path=_DB_PATH, snapshot_dir=_SNAPSHOT_DIR)
+auth_db: AuthDB          = AuthDB(_shared_conn)
+notification_db: NotificationDB = NotificationDB(_shared_conn)
+
+_notification_dispatcher = NotificationDispatcher(
+    notification_db  = notification_db,
+    auth_db          = auth_db,
+    email_config     = EmailConfig.from_env(),
+    twilio_config    = TwilioConfig.from_env(),
+)
 
 
 def get_store() -> EventStore:
     return _store
+
+
+def _get_notification_db_impl() -> NotificationDB:
+    return notification_db
 
 
 StoreDep = Annotated[EventStore, Depends(get_store)]
@@ -71,6 +90,8 @@ StoreDep = Annotated[EventStore, Depends(get_store)]
 # Routers
 # ---------------------------------------------------------------------------
 app.include_router(auth_router)
+app.include_router(notifications_router)
+app.dependency_overrides[_get_notification_db] = _get_notification_db_impl
 
 
 # ---------------------------------------------------------------------------

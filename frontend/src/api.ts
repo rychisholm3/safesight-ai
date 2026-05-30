@@ -123,3 +123,37 @@ export async function saveZones(config: ZonesConfig): Promise<ZonesConfig> {
   if (!res.ok) throw new Error("Failed to save zones");
   return res.json();
 }
+
+// ── Notification preferences ─────────────────────────────────────────────────
+
+export interface NotificationPrefs {
+  user_id: string;
+  email_enabled: boolean;
+  sms_enabled: boolean;
+  slack_enabled: boolean;
+  teams_enabled: boolean;
+  min_severity: "WARNING" | "CRITICAL";
+  quiet_start: string | null;
+  quiet_end: string | null;
+  email_to: string | null;
+  phone_number: string | null;
+  slack_webhook: string | null;
+  teams_webhook: string | null;
+}
+
+export async function fetchNotificationPrefs(): Promise<NotificationPrefs> {
+  const res = await apiFetch("/notifications/prefs");
+  if (!res.ok) throw new Error("Failed to fetch notification preferences");
+  return res.json();
+}
+
+export async function saveNotificationPrefs(
+  prefs: Omit<NotificationPrefs, "user_id">
+): Promise<NotificationPrefs> {
+  const res = await apiFetch("/notifications/prefs", {
+    method: "PUT",
+    body: JSON.stringify(prefs),
+  });
+  if (!res.ok) throw new Error("Failed to save notification preferences");
+  return res.json();
+}

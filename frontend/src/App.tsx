@@ -6,6 +6,7 @@ import { useWebSocket } from "./useWebSocket";
 import { EventRow } from "./EventRow";
 import { ZoneEditor } from "./ZoneEditor";
 import { LoginPage } from "./LoginPage";
+import { SettingsPage } from "./SettingsPage";
 
 const MAX_EVENTS = 200;
 
@@ -35,6 +36,7 @@ export default function App() {
 function Dashboard({ user, signOut }: { user: { email: string; role: string }; signOut: () => void }) {
   const [events, setEvents] = useState<SafeEvent[]>([]);
   const [showZoneEditor, setShowZoneEditor] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion">("all");
   const [severityFilter, setSeverityFilter] = useState<"all" | "WARNING" | "CRITICAL">("all");
@@ -76,6 +78,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f5f6fa" }}>
       {showZoneEditor && <ZoneEditor onClose={() => setShowZoneEditor(false)} />}
+      {showSettings  && <SettingsPage onClose={() => setShowSettings(false)} />}
       {/* Header */}
       <div
         style={{
@@ -111,6 +114,17 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
           }}
         >
           Edit Zones
+        </button>
+
+        <button
+          onClick={() => setShowSettings(true)}
+          style={{
+            padding: "5px 14px", borderRadius: 20,
+            border: "1px solid #4b5563", background: "transparent",
+            color: "#d1d5db", fontSize: 12, cursor: "pointer", fontWeight: 500,
+          }}
+        >
+          Alerts
         </button>
 
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>

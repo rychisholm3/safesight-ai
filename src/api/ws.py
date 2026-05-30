@@ -52,14 +52,20 @@ class EventBroadcaster:
 
     The pipeline calls publish() from its thread; this schedules a coroutine
     on the running event loop so all WebSocket clients receive the message.
+    An optional notification dispatcher is called for every opened event.
     """
 
     def __init__(self, manager: ConnectionManager) -> None:
         self._manager = manager
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._dispatcher = None
 
     def set_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
+
+    def set_dispatcher(self, dispatcher) -> None:
+        """Register a NotificationDispatcher; called from api/main.py at startup."""
+        self._dispatcher = dispatcher
 
     def publish(self, event: Event, action: str) -> None:
         """Call from any thread. action is 'opened' or 'closed'."""
@@ -68,6 +74,8 @@ class EventBroadcaster:
             return
         message = {"type": "event", "action": action, "event": _event_to_dict(event)}
         asyncio.run_coroutine_threadsafe(self._manager.broadcast(message), self._loop)
+        if action == "opened" and self._dispatcher is not None:
+            self._dispatcher.dispatch(event)
 
 
 # Module-level singletons — imported by main.py and by the pipeline.

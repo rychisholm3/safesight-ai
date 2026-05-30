@@ -110,6 +110,12 @@ class AuthDB:
         ).fetchall()
         return [_row_to_user(r) for r in rows]
 
+    def list_all_users(self) -> list[User]:
+        rows = self._conn.execute(
+            "SELECT * FROM users ORDER BY email"
+        ).fetchall()
+        return [_row_to_user(r) for r in rows]
+
 
 def _row_to_user(row: sqlite3.Row) -> User:
     d = dict(row)
