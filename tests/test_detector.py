@@ -54,8 +54,9 @@ class TestDetector:
         mock_yolo.assert_called_once_with("yolo26n.pt")
 
     def test_accepts_path_object(self, mock_yolo: MagicMock) -> None:
-        Detector(Path("models/yolo26n.pt"))
-        mock_yolo.assert_called_once_with("models/yolo26n.pt")
+        p = Path("models/yolo26n.pt")
+        Detector(p)
+        mock_yolo.assert_called_once_with(str(p))
 
     def test_detect_no_boxes_returns_empty_list(self, mock_yolo: MagicMock) -> None:
         mock_yolo.return_value.return_value = [make_mock_result([])]

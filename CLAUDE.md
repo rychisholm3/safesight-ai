@@ -38,7 +38,7 @@ cd frontend && npm install && npm run dev         # React dashboard
 The pipeline is a linear chain of discrete modules, each independently testable:
 
 ```
-Video source → Frame reader → YOLOv8 → ByteTrack → Rules engine → Event store → FastAPI → React
+Video source → Frame reader → YOLO26 → ByteTrack → Rules engine → Event store → FastAPI → React
 (file/cam/RTSP) (threaded)  (detect)  (track IDs)  (PPE+zones)   (SQLite)    (REST/WS) (dashboard)
                                                           ▲
                                                      zones.json
@@ -47,7 +47,7 @@ Video source → Frame reader → YOLOv8 → ByteTrack → Rules engine → Even
 **Key design decisions:**
 
 - **Threaded frame reader** (`src/reader.py`, not yet built): RTSP latency is absorbed by a background thread with a bounded queue so inference runs at a steady rate.
-- **Detection and tracking are separate**: `src/detector.py` wraps YOLOv8 for per-frame detection; `src/tracker.py` (not yet built) wraps ByteTrack to assign persistent person IDs across frames. Without tracking, a violation would fire 30 times/second per person.
+- **Detection and tracking are separate**: `src/detector.py` wraps YOLO26 for per-frame detection; `src/tracker.py` (not yet built) wraps ByteTrack to assign persistent person IDs across frames. Without tracking, a violation would fire 30 times/second per person.
 - **Rules engine operates on tracked objects, not raw detections**: After tracking assigns stable IDs, the rules engine (`src/rules.py`, not yet built) checks PPE presence and bounding-box overlap with zone polygons per-frame, but emits events only on state *transitions* (N consecutive frames in violation = one event).
 - **Zones are JSON-configured**: Operators define keep-out polygons and per-zone PPE requirements in `config/zones.json` — no code changes to add a zone. Polygons are pixel coordinates in the source frame.
 - **Event debouncing is per person ID**: Each person-ID tracks its own violation state so simultaneous violations from multiple people are independent.

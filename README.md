@@ -13,7 +13,7 @@ This is a working prototype of the same problem that companies like Intenseye, P
 ## Architecture
 
 ```
-Video source ─▶ Frame reader ─▶ YOLOv8 ─▶ ByteTrack ─▶ Rules engine ─▶ Event store ─▶ FastAPI ─▶ React
+Video source ─▶ Frame reader ─▶ YOLO26 ─▶ ByteTrack ─▶ Rules engine ─▶ Event store ─▶ FastAPI ─▶ React
  (file/cam/RTSP)  (threaded)    (detection) (tracking)   (PPE + zones)    (SQLite)     (REST/WS)   (dashboard)
                                                               ▲
                                                               │
@@ -24,7 +24,7 @@ Video source ─▶ Frame reader ─▶ YOLOv8 ─▶ ByteTrack ─▶ Rules eng
 Each stage is a discrete module so they can be swapped or tested independently. Key design decisions:
 
 - **Threaded frame reader.** RTSP streams introduce variable latency. Reading frames on a background thread with a small bounded queue keeps inference running at a steady rate and drops frames gracefully when the network is slow.
-- **Detection + tracking are separate.** YOLOv8 detects what's in a single frame. ByteTrack assigns a persistent ID across frames using IoU + motion prediction. Without tracking, a person standing still would log a "missing hardhat" violation 30 times per second. With tracking, each person has one ID and one event per incident.
+- **Detection + tracking are separate.** YOLO26 detects what's in a single frame. ByteTrack assigns a persistent ID across frames using IoU + motion prediction. Without tracking, a person standing still would log a "missing hardhat" violation 30 times per second. With tracking, each person has one ID and one event per incident.
 - **Rules engine consumes tracked objects, not raw detections.** The rules engine sees a stable list of people-with-IDs, each tagged with their detected PPE and bounding box. It checks two things: does this person have required PPE for the active rule set, and does their bounding box overlap any restricted zone polygon. Both checks happen per-frame, but events are only emitted when state *transitions* (no-hardhat → no-hardhat for N consecutive frames triggers; clearing the violation closes it).
 - **Zones are JSON-configurable.** Operators define keep-out polygons and PPE requirements in a config file. No code changes to add a new zone.
 - **SQLite + snapshot files.** Each event row stores the timestamp, person ID, violation type, zone ID, bounding box, and the path to a JPEG snapshot of the frame at the moment of detection. Snapshots make the dashboard reviewable; the database makes it queryable.
@@ -33,7 +33,7 @@ Each stage is a discrete module so they can be swapped or tested independently. 
 
 | Layer            | Choice                          | Why                                          |
 | ---------------- | ------------------------------- | -------------------------------------------- |
-| Detection        | YOLOv8 (Ultralytics)            | State of the art, fast, good Python tooling  |
+| Detection        | YOLO26 (Ultralytics)            | Edge-optimised, 43% faster CPU than YOLOv8, NMS-free, better small-object detection |
 | Tracking         | ByteTrack                       | Strong on occlusion, lightweight             |
 | Video I/O        | OpenCV                          | Standard, handles files/cameras/RTSP        |
 | Backend          | FastAPI + Uvicorn               | Async, WebSocket support, OpenAPI for free  |
@@ -78,7 +78,7 @@ safesight-ai/
 ### Prerequisites
 - Python 3.10+
 - Node 18+ (for the dashboard)
-- A YOLO weights file (the app downloads `yolov8n.pt` on first run; PPE-specific weights go in `models/`)
+- YOLO26 weights (auto-downloaded from Ultralytics on first run; PPE-specific weights go in `models/`)
 
 ### Install
 
