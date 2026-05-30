@@ -151,7 +151,7 @@ Polygons are pixel coordinates in the source frame.
 - [x] SQLite event store + snapshot writer
 - [x] FastAPI REST endpoints (events, zones, stats)
 - [x] WebSocket live event stream
-- [ ] React dashboard: live view + event log
+- [x] React dashboard: live view + event log
 - [ ] React dashboard: zone editor (draw polygons on frame)
 - [ ] Performance benchmarking (FPS on CPU vs GPU, model size tradeoff)
 - [ ] Dockerfile for one-command deploy
