@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import sqlite3
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -11,6 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.api.ws import broadcaster, websocket_endpoint
+from src.auth.db import AuthDB
+from src.auth.dependencies import require_auth
+from src.auth.models import User
+from src.auth.router import router as auth_router
 from src.store import EventStore
 
 
@@ -20,7 +25,7 @@ async def _lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="SafeSight AI", version="0.1.0", lifespan=_lifespan)
+app = FastAPI(title="SafeSight AI", version="0.2.0", lifespan=_lifespan)
 
 _cors_origins = os.environ.get("SAFESIGHT_CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
@@ -31,32 +36,41 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
-# Config from environment (with sensible defaults)
+# Config from environment
 # ---------------------------------------------------------------------------
-_DB_PATH = Path(os.environ.get("SAFESIGHT_DB", "data/events.db"))
+_DB_PATH      = Path(os.environ.get("SAFESIGHT_DB",        "data/events.db"))
 _SNAPSHOT_DIR = Path(os.environ.get("SAFESIGHT_SNAPSHOTS", "data/snapshots"))
-_ZONES_PATH = Path(os.environ.get("SAFESIGHT_ZONES", "config/zones.json"))
+_ZONES_PATH   = Path(os.environ.get("SAFESIGHT_ZONES",     "config/zones.json"))
 
 # ---------------------------------------------------------------------------
-# Static files — serve snapshot JPEGs at /snapshots/<filename>
+# Static files
 # ---------------------------------------------------------------------------
 _SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/snapshots", StaticFiles(directory=str(_SNAPSHOT_DIR)), name="snapshots")
 
 # ---------------------------------------------------------------------------
-# Dependency — one shared EventStore for the lifetime of the process
+# Shared singletons — one connection, one store, one auth_db
 # ---------------------------------------------------------------------------
-_store: EventStore | None = None
+_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+_shared_conn: sqlite3.Connection = sqlite3.connect(
+    str(_DB_PATH), check_same_thread=False
+)
+_shared_conn.row_factory = sqlite3.Row
+
+_store: EventStore = EventStore(db_path=_DB_PATH, snapshot_dir=_SNAPSHOT_DIR)
+auth_db: AuthDB    = AuthDB(_shared_conn)
 
 
 def get_store() -> EventStore:
-    global _store
-    if _store is None:
-        _store = EventStore(db_path=_DB_PATH, snapshot_dir=_SNAPSHOT_DIR)
     return _store
 
 
 StoreDep = Annotated[EventStore, Depends(get_store)]
+
+# ---------------------------------------------------------------------------
+# Routers
+# ---------------------------------------------------------------------------
+app.include_router(auth_router)
 
 
 # ---------------------------------------------------------------------------
@@ -68,14 +82,14 @@ def health():
 
 
 @app.get("/zones")
-def get_zones():
+def get_zones(_: User = Depends(require_auth)):
     if not _ZONES_PATH.exists():
         raise HTTPException(status_code=404, detail=f"zones file not found: {_ZONES_PATH}")
     return json.loads(_ZONES_PATH.read_text())
 
 
 @app.put("/zones")
-def put_zones(body: dict):
+def put_zones(body: dict, _: User = Depends(require_auth)):
     _ZONES_PATH.parent.mkdir(parents=True, exist_ok=True)
     _ZONES_PATH.write_text(json.dumps(body, indent=2))
     return body
@@ -84,15 +98,16 @@ def put_zones(body: dict):
 @app.get("/events")
 def list_events(
     store: StoreDep,
-    event_type: str | None = Query(default=None, description="Filter by 'missing_ppe' or 'zone_intrusion'"),
-    since: datetime | None = Query(default=None, description="ISO datetime — return events after this timestamp"),
+    _: User = Depends(require_auth),
+    event_type: str | None = Query(default=None),
+    since: datetime | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=1000),
 ):
     return store.get_events(event_type=event_type, since=since, limit=limit)
 
 
 @app.get("/events/{event_id}")
-def get_event(event_id: str, store: StoreDep):
+def get_event(event_id: str, store: StoreDep, _: User = Depends(require_auth)):
     rows = store.get_events(limit=1000)
     match = next((r for r in rows if r["event_id"] == event_id), None)
     if match is None:
@@ -107,7 +122,7 @@ async def ws_events(ws: WebSocket, store: StoreDep):
 
 
 @app.get("/stats")
-def get_stats(store: StoreDep):
+def get_stats(store: StoreDep, _: User = Depends(require_auth)):
     all_events = store.get_events(limit=10_000)
     total = len(all_events)
     by_type: dict[str, int] = {}
@@ -122,3 +137,10 @@ def get_stats(store: StoreDep):
         "closed": total - open_count,
         "by_type": by_type,
     }
+
+
+@app.get("/orgs/sites")
+def list_sites(current_user: User = Depends(require_auth)):
+    sites = auth_db.list_sites(current_user.org_id)
+    return [{"site_id": s.site_id, "name": s.name, "timezone": s.timezone,
+             "rtsp_url": s.rtsp_url} for s in sites]

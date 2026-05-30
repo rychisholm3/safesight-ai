@@ -1,13 +1,38 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SafeEvent, Stats } from "./types";
 import { fetchStats } from "./api";
+import { useAuth } from "./AuthContext";
 import { useWebSocket } from "./useWebSocket";
 import { EventRow } from "./EventRow";
 import { ZoneEditor } from "./ZoneEditor";
+import { LoginPage } from "./LoginPage";
 
 const MAX_EVENTS = 200;
 
+const ROLE_LABEL: Record<string, string> = {
+  safety_officer: "Safety Officer",
+  site_manager:   "Site Manager",
+  executive:      "Executive",
+  auditor:        "Auditor",
+};
+
 export default function App() {
+  const { user, loading, signOut } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f5f6fa", color: "#9ca3af", fontSize: 14 }}>
+        Loading…
+      </div>
+    );
+  }
+
+  if (!user) return <LoginPage />;
+
+  return <Dashboard user={user} signOut={signOut} />;
+}
+
+function Dashboard({ user, signOut }: { user: { email: string; role: string }; signOut: () => void }) {
   const [events, setEvents] = useState<SafeEvent[]>([]);
   const [showZoneEditor, setShowZoneEditor] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -88,8 +113,30 @@ export default function App() {
           Edit Zones
         </button>
 
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 12, color: "#e5e7eb" }}>{user.email}</div>
+            <div style={{
+              fontSize: 10, color: "#94a3b8",
+              textTransform: "uppercase", letterSpacing: 0.5,
+            }}>
+              {ROLE_LABEL[user.role] ?? user.role}
+            </div>
+          </div>
+          <button
+            onClick={signOut}
+            style={{
+              padding: "5px 12px", borderRadius: 20,
+              border: "1px solid #4b5563", background: "transparent",
+              color: "#9ca3af", fontSize: 11, cursor: "pointer",
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+
         {stats && (
-          <div style={{ marginLeft: "auto", display: "flex", gap: 20, fontSize: 13 }}>
+          <div style={{ display: "flex", gap: 20, fontSize: 13 }}>
             <StatChip label="Total" value={stats.total} color="#94a3b8" />
             <StatChip label="Active" value={stats.open} color="#f87171" />
             <StatChip label="Missing PPE" value={stats.by_type["missing_ppe"] ?? 0} color="#fbbf24" />

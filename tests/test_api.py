@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 
 from src.api import main as api_module
 from src.api.main import app
+from src.auth.dependencies import require_auth
+from src.auth.models import Role, User
 from src.events import Event
 from src.store import EventStore
 
@@ -20,9 +22,30 @@ def make_event(**kwargs) -> Event:
         start_frame=0,
         end_frame=None,
         snapshot_path=None,
+        severity="WARNING",
     )
     defaults.update(kwargs)
     return Event(**defaults)
+
+
+def _fake_user() -> User:
+    return User(
+        user_id="test-user",
+        org_id="test-org",
+        email="test@example.com",
+        hashed_password="hashed",
+        role=Role.safety_officer,
+        is_active=True,
+        created_at="2024-01-01T00:00:00+00:00",
+    )
+
+
+@pytest.fixture(autouse=True)
+def bypass_auth():
+    """Override require_auth so tests don't need real JWTs."""
+    app.dependency_overrides[require_auth] = _fake_user
+    yield
+    app.dependency_overrides.pop(require_auth, None)
 
 
 @pytest.fixture(autouse=True)
@@ -99,6 +122,12 @@ class TestListEvents:
 
     def test_invalid_limit_rejected(self, client):
         assert client.get("/events?limit=0").status_code == 422
+
+    def test_unauthenticated_returns_401(self, client):
+        app.dependency_overrides.pop(require_auth, None)
+        r = client.get("/events")
+        assert r.status_code == 401
+        app.dependency_overrides[require_auth] = _fake_user
 
 
 class TestGetEvent:
