@@ -1,4 +1,4 @@
-import type { SafeEvent, Stats } from "./types";
+import type { SafeEvent, Stats, ZonesConfig } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 export const WS_URL = BASE.replace(/^http/, "ws") + "/ws/events";
@@ -18,5 +18,21 @@ export async function fetchEvents(params?: {
 export async function fetchStats(): Promise<Stats> {
   const res = await fetch(`${BASE}/stats`);
   if (!res.ok) throw new Error("Failed to fetch stats");
+  return res.json();
+}
+
+export async function fetchZones(): Promise<ZonesConfig> {
+  const res = await fetch(`${BASE}/zones`);
+  if (!res.ok) throw new Error("Failed to fetch zones");
+  return res.json();
+}
+
+export async function saveZones(config: ZonesConfig): Promise<ZonesConfig> {
+  const res = await fetch(`${BASE}/zones`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) throw new Error("Failed to save zones");
   return res.json();
 }

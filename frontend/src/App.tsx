@@ -3,11 +3,13 @@ import type { SafeEvent, Stats } from "./types";
 import { fetchStats } from "./api";
 import { useWebSocket } from "./useWebSocket";
 import { EventRow } from "./EventRow";
+import { ZoneEditor } from "./ZoneEditor";
 
 const MAX_EVENTS = 200;
 
 export default function App() {
   const [events, setEvents] = useState<SafeEvent[]>([]);
+  const [showZoneEditor, setShowZoneEditor] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion">("all");
   const [connected, setConnected] = useState(false);
@@ -45,6 +47,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f5f6fa" }}>
+      {showZoneEditor && <ZoneEditor onClose={() => setShowZoneEditor(false)} />}
       {/* Header */}
       <div
         style={{
@@ -70,6 +73,17 @@ export default function App() {
           title={connected ? "Live" : "Connecting…"}
         />
         <div style={{ fontSize: 12, color: "#aaa" }}>{connected ? "Live" : "Connecting…"}</div>
+
+        <button
+          onClick={() => setShowZoneEditor(true)}
+          style={{
+            marginLeft: 16, padding: "5px 14px", borderRadius: 20,
+            border: "1px solid #4b5563", background: "transparent",
+            color: "#d1d5db", fontSize: 12, cursor: "pointer", fontWeight: 500,
+          }}
+        >
+          Edit Zones
+        </button>
 
         {stats && (
           <div style={{ marginLeft: "auto", display: "flex", gap: 20, fontSize: 13 }}>

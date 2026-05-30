@@ -10,6 +10,19 @@ export interface SafeEvent {
   created_at: string;
 }
 
+export interface Zone {
+  id: string;
+  name: string;
+  polygon: [number, number][];
+  rule: "no_entry" | "require_ppe";
+  required_ppe?: string[];
+}
+
+export interface ZonesConfig {
+  required_ppe: string[];
+  zones: Zone[];
+}
+
 export interface Stats {
   total: number;
   open: number;

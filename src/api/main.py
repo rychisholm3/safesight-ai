@@ -73,6 +73,13 @@ def get_zones():
     return json.loads(_ZONES_PATH.read_text())
 
 
+@app.put("/zones")
+def put_zones(body: dict):
+    _ZONES_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _ZONES_PATH.write_text(json.dumps(body, indent=2))
+    return body
+
+
 @app.get("/events")
 def list_events(
     store: StoreDep,
