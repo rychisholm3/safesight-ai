@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-SafeSight AI is a real-time workplace safety monitoring system for construction sites, warehouses, and manufacturing floors. It ingests video from files, webcams, or RTSP streams and detects violations: missing PPE (hardhats, vests, gloves, goggles), restricted-zone intrusions, vehicle-pedestrian proximity, fall detection, and unsafe behaviours. Detections are tracked per-person across frames, stored with snapshots and OSHA rule references in a database, and surfaced via a FastAPI backend and React dashboard with multi-channel alerting.
+SafeSight AI is a real-time construction safety intelligence platform. It ingests video from files, webcams, or RTSP streams and detects PPE violations, restricted-zone intrusions, vehicle-pedestrian proximity hazards, near-misses, and unsafe behaviours. Every detection is tracked per-person, enriched with OSHA rule references and corrective action plans, and surfaced via a FastAPI backend and React dashboard with multi-channel alerting, predictive risk scoring, natural-language safety investigation (AI Safety Copilot), automated root-cause analysis, and a site replay system.
 
-**Status: active development.** Core pipeline, API, dashboard, severity levels, and webhook alerting are complete. Next: authentication and organisations (Phase 1).
+The goal is not to be another object-detection wrapper. SafeSight is built to answer: *"why is risk increasing, what is about to go wrong, and what should we do about it?"*
+
+**Status: active development.** Phase 1 (auth, organisations, RBAC) is complete. Next: Phase 2 (multi-channel notifications).
 
 ## Setup
 
@@ -97,86 +99,89 @@ Key design decisions:
 - Dockerfile + docker-compose
 - Fine-tuning infrastructure (scripts/train.py, scripts/download_dataset.py)
 
-### Phase 1 — Authentication & Organisations
-- User model: email, hashed password, role, org_id
-- JWT auth endpoints: register, login, refresh
-- Organisations and sites tables (one org → many sites → many cameras)
+### Phase 1 — Authentication & Organisations ✅
+- JWT auth (register, login, refresh, /me); organisations and sites tables
 - RBAC: Safety Officer, Site Manager, Executive, Auditor
-- React auth flow: login/register pages, protected routes, role-aware nav
+- React login/register pages, protected routes, role badge, sign-out
 
 ### Phase 2 — Multi-Channel Notifications
-- Email alerts via SMTP / SendGrid (HTML template with snapshot embed)
-- SMS via Twilio
-- Slack via Incoming Webhooks (Block Kit card)
-- Microsoft Teams via Adaptive Cards
-- Per-user notification preferences (channels, minimum severity, quiet hours)
-- Alert deduplication (no repeat notifications for the same open event)
-- Dashboard settings page for configuring channels
+- Email (SMTP / SendGrid), SMS (Twilio), Slack (Block Kit), Teams (Adaptive Cards)
+- Per-user preferences: channels, minimum severity, quiet hours; alert deduplication
+- Dashboard settings page for all channels
 
-### Phase 3 — OSHA Rule Engine
-- OSHA regulation database (config/osha_rules.json): code, description, fine range, recommendation
-- Rule matcher: maps (violation_type, missing_ppe, zone_rule) → OSHA codes
-- Enrich events with osha_codes, fine_estimate_usd, recommendation
+### Phase 3 — Predictive Risk Engine
+- Violation frequency trend tracker per zone / worker / type over rolling windows
+- Repeat offender detection (3+ violations in configurable window)
+- Zone risk scoring: violation density + time-of-day patterns + trend direction
+- Rising-risk alerts when a zone's rate increases > 20% week-over-week
+- Congestion monitoring in restricted areas; live risk level dashboard per zone
+
+### Phase 4 — OSHA Rule Engine & AI Safety Consultant
+- OSHA regulation database: code, description, fine range, recommendation
+- Rule matcher: (violation_type, missing_ppe, zone_rule) → OSHA codes
+- Enrich events with osha_codes, fine_estimate_usd, corrective action plan, estimated resolution time
+- "How similar sites resolved this" context; recommended supervisor notification per violation class
 - Violation detail panel: OSHA card, confidence %, annotated snapshot, plain-English explanation
 
-### Phase 4 — Explainability & Evidence
-- Confidence score propagated from detector through to API and dashboard
-- Reason breakdown: structured list of why a violation was flagged
-- Annotated snapshot viewer with bounding boxes per detection class
-- Plain-English explanation sentence generated per event
+### Phase 5 — AI Safety Copilot
+- LLM integration (Claude API) with full event + analytics + OSHA dataset as context
+- Natural language query endpoint: POST /copilot/ask → structured answer with cited evidence
+- Handles: "Why did the safety score drop?", "Which workers keep violating PPE?", "What's the highest-risk zone?"
+- Chat-style UI panel; role-aware responses (Executive gets summary, Safety Officer gets full evidence)
 
-### Phase 5 — Safety Timeline
-- Chronological timeline view grouped by hour (replaces flat event list)
-- Supervisor intervention notes (Site Manager role can add manual entries)
-- Timeline PDF export for compliance folders
-- Incident story: highlight violation runs by the same person
+### Phase 6 — Explainability & Evidence
+- Confidence score from detector propagated through to API and dashboard
+- Reason breakdown: structured explanation list per event
+- Annotated snapshot viewer: bounding boxes per detection class
+- Evidence export: one-click PDF with snapshot, reason chain, OSHA reference, timestamp
 
-### Phase 6 — Analytics & Safety Score
-- Analytics API: violations grouped by day/week/type/zone/worker
-- Safety score algorithm: per-category compliance rates → weighted composite 0–100
-- Safety score history table, recalculated nightly via background job
-- Analytics dashboard page: line chart (violations/day), bar chart (by type), safety score gauge
-- Trend analysis: flag week-over-week increases > 20%
+### Phase 7 — Near-Miss Detection
+- Forklift-pedestrian proximity: CRITICAL when bboxes within N pixels without contact
+- Zone entry + safe exit logged as near-miss (captures unreported events)
+- Trajectory-based hazard prediction: extrapolate paths to flag likely collisions
+- Near-miss severity scoring; separate event type; insurance-ready export
 
-### Phase 7 — Heatmaps
-- Site map image upload per site (floor plan PNG/JPG)
-- Violation centroid coordinates stored per event
-- Server-side heatmap generation (Gaussian density overlay on site map)
-- Heatmap API endpoint returning PNG
-- Dashboard heatmap tab with colour key (red/yellow/green)
+### Phase 8 — Safety Timeline & Compliance Autopilot
+- Chronological timeline grouped by hour: violations, near-misses, supervisor notes in one feed
+- Supervisor intervention notes; incident story for multi-event sequences; PDF export
+- Live compliance status: PPE %, zone %, overall PASS / FAIL
+- Predicted compliance for tomorrow based on current trends; compliance history graph
 
-### Phase 8 — Multi-Site Dashboard
-- Organisation overview: site cards with live violation count, safety score, status badge
-- Cross-site metrics: violations per worker, per site per day, org safety score
-- Site switcher in nav; all pages scope to selected site
-- Weekly org safety digest email across all sites
+### Phase 9 — Automated Root Cause Analysis
+- Time-of-day correlation: detect when violations cluster (shift changes, lunch, end of day)
+- Location + worker-type correlation (temp vs. permanent staff, subcontractor breakdowns)
+- Root cause summary auto-generated per site per week; intervention recommendations
 
-### Phase 9 — Incident Resolution Workflow
+### Phase 10 — Analytics, Safety Score & Heatmaps
+- Analytics API: violations by day / week / type / zone / worker; trend charts
+- Safety score 0–100: per-category compliance rates → weighted composite; nightly recalc
+- Heatmap: site map upload, Gaussian density overlay, separate layers (violations / near-misses)
+- Safety score gauge, 7-day trend arrow, per-category breakdown
+
+### Phase 11 — Multi-Site Dashboard & Incident Workflow
+- Organisation overview: site cards with live count, safety score, status badge
+- Cross-site metrics; site switcher; weekly org safety digest email
 - Incident state machine: detected → assigned → investigating → resolved → closed
-- Assignment to users with Site Manager / Safety Officer role
-- Activity log: every status change recorded with timestamp and user
-- Resolution notes field
-- Workflow filters in dashboard
-- SLA tracking: configurable time-to-resolution targets per severity, overdue flags
+- Activity log, resolution notes, SLA tracking, overdue flags
 
-### Phase 10 — Extended Detection Categories
-- Vehicle detection: forklift, truck, excavator, scissor lift
-- Forklift-pedestrian proximity alert (CRITICAL when bboxes within N pixels)
-- Behavior detection: running, climbing improperly
-- Fall detection: aspect-ratio flip heuristic + pose model; auto-triggers SMS regardless of preferences
+### Phase 12 — Digital Safety Twin & Site Replay
+- Site model: camera positions and fields-of-view mapped onto a floor plan
+- Worker and equipment position tracking stored at 1 FPS
+- Site replay: scrub to any timestamp and replay movement overlaid on the floor plan
+- Hazard development visualisation; MP4 replay export; configurable retention policy
+
+### Phase 13 — Extended Detection Categories
+- Vehicle detection: forklift, truck, excavator, scissor lift (separate YOLO26 fine-tune)
+- Fall detection: aspect-ratio heuristic + pose model; auto-triggers SMS
+- Behaviour detection: running, climbing improperly, phone use in restricted area
 - Hazard detection: open trench, unsecured ladder, scaffolding without guardrail
-- OSHA rules for all new categories (1926.600 vehicles, 1926.502 fall protection)
-- Per-zone detection category config (operators enable/disable categories per zone)
+- OSHA rules for all new categories; per-zone detection category config
 
-### Phase 11 — Production Infrastructure
-- PostgreSQL migration from SQLite (alembic migrations, asyncpg connection pool)
-- Redis pub/sub replacing in-process WebSocket broadcaster (enables horizontal scaling)
-- Background job queue (arq) for nightly scores, weekly emails, heatmap pre-generation
-- GitHub Actions CI: pytest + tsc on every PR; Docker image build + push on merge to main
-- Cloud deployment: separate containers for api, worker, frontend, postgres, redis
-- Prometheus metrics + Grafana dashboard (request latency, pipeline FPS, queue depth)
-- S3 / compatible storage for snapshots (signed URLs, MinIO for local dev)
-- Per-organisation API keys and rate limiting
+### Phase 14 — Production Infrastructure
+- PostgreSQL migration (alembic, asyncpg); Redis pub/sub for horizontal WS scaling
+- Background job queue (arq): nightly scores, weekly emails, heatmaps, replay rendering
+- GitHub Actions CI; cloud deployment (api, worker, frontend, postgres, redis containers)
+- Prometheus + Grafana; S3-compatible snapshot and replay storage; API keys + rate limiting
 
 ## Coding conventions
 
