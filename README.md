@@ -2,7 +2,7 @@
 
 Real-time workplace safety monitoring with computer vision. SafeSight ingests video from files, webcams, or RTSP streams and continuously checks for two classes of safety violations: **missing PPE** (hardhats, high-vis vests) and **restricted-zone intrusions** (people entering operator-defined keep-out areas). Detections are tracked across frames so each person gets a persistent ID, violations are debounced per-person so a single incident produces a single event, and every event is stored with a timestamp, frame snapshot, and zone metadata in a queryable database. A FastAPI backend exposes the event stream over REST and WebSockets, and a React dashboard lets safety operators review the live feed, filter historical events, and configure zones.
 
-> Status: in development. Currently building the inference pipeline. See the roadmap at the bottom.
+> Status: fully functional. Run with `python -m src.pipeline --source YOUR_SOURCE`. Train a custom PPE model with `scripts/train.py`.
 
 ## Why this exists
 

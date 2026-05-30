@@ -1,0 +1,51 @@
+# SafeSight fine-tuning config for YOLO26
+# Designed for robustness across diverse CCTV camera setups:
+#   - Variable mount angles (overhead, side, elevated, tilted)
+#   - Variable distances (workers 2m–50m from camera)
+#   - Variable lighting (sun, shade, dust, rain, night IR)
+#   - Variable camera quality (HD down to 480p legacy systems)
+#
+# Usage: python scripts/train.py --data data/ppe_dataset/data.yaml
+
+# ── Model ─────────────────────────────────────────────────────────────────────
+model: yolo26s.pt        # start from pretrained YOLO26s (change to yolo26m for +accuracy)
+epochs: 80
+imgsz: 1280              # larger crops catch workers far from camera
+batch: 8                 # lower if GPU OOM; increase on A100/4090
+workers: 4
+device: 0                # GPU id, or 'cpu' for CPU-only training (slow)
+project: models
+name: safesight-ppe
+
+# ── Augmentation — angle & lighting robustness ────────────────────────────────
+# Geometric: simulate every camera mount angle a site might use
+degrees: 15.0            # ±15° rotation — covers tilted mounts
+perspective: 0.0008      # slight perspective warp — overhead vs side view
+flipud: 0.05             # occasional vertical flip — rare but some mounts are inverted
+fliplr: 0.5              # horizontal flip — standard
+scale: 0.6               # ±60% scale — worker at 3m vs 40m from camera
+translate: 0.15          # bbox shift — workers near frame edges
+shear: 4.0               # small shear — parallax from wide-angle lenses
+mosaic: 1.0              # mosaic — mixes crops, great for multi-scale robustness
+mixup: 0.1               # mixup — additional regularisation
+copy_paste: 0.05         # copy-paste augmentation — helps with occlusion
+
+# Photometric: simulate every lighting condition a construction site sees
+hsv_h: 0.015             # hue shift — different times of day, indoor lighting
+hsv_s: 0.7               # saturation — dusty haze vs clear sunny day
+hsv_v: 0.4               # value/brightness — shadows, direct sun, IR cameras
+erasing: 0.3             # random erase — simulate partial occlusion by scaffold/machinery
+
+# ── Training hyperparameters ──────────────────────────────────────────────────
+lr0: 0.001               # initial LR — lower for fine-tuning (pretrained backbone)
+lrf: 0.01                # final LR factor
+warmup_epochs: 3
+weight_decay: 0.0005
+dropout: 0.0
+close_mosaic: 10         # disable mosaic last N epochs for stable convergence
+
+# ── Validation & output ───────────────────────────────────────────────────────
+val: true
+save: true
+save_period: 10          # checkpoint every 10 epochs
+plots: true              # training curves + confusion matrix
