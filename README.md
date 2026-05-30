@@ -147,7 +147,7 @@ Polygons are pixel coordinates in the source frame.
 - [x] ByteTrack integration with persistent IDs
 - [x] Rules engine: PPE checks
 - [x] Rules engine: zone intrusion (point-in-polygon)
-- [ ] Per-ID event debouncing
+- [x] Per-ID event debouncing
 - [ ] SQLite event store + snapshot writer
 - [ ] FastAPI REST endpoints (events, zones, stats)
 - [ ] WebSocket live event stream
