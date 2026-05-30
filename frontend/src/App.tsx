@@ -8,6 +8,7 @@ import { ZoneEditor } from "./ZoneEditor";
 import { LoginPage } from "./LoginPage";
 import { SettingsPage } from "./SettingsPage";
 import { RiskPanel } from "./RiskPanel";
+import { SetupWizard } from "./SetupWizard";
 
 const MAX_EVENTS = 200;
 
@@ -38,6 +39,9 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
   const [events, setEvents] = useState<SafeEvent[]>([]);
   const [showZoneEditor, setShowZoneEditor] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSetup, setShowSetup] = useState(
+    () => !localStorage.getItem("safesight_setup_done")
+  );
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion">("all");
   const [severityFilter, setSeverityFilter] = useState<"all" | "WARNING" | "CRITICAL">("all");
@@ -79,6 +83,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f5f6fa" }}>
+      {showSetup     && <SetupWizard onDone={() => setShowSetup(false)} />}
       {showZoneEditor && <ZoneEditor onClose={() => setShowZoneEditor(false)} />}
       {showSettings  && <SettingsPage onClose={() => setShowSettings(false)} />}
       {/* Header */}
@@ -108,9 +113,21 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
         <div style={{ fontSize: 12, color: "#aaa" }}>{connected ? "Live" : "Connecting…"}</div>
 
         <button
-          onClick={() => setShowZoneEditor(true)}
+          onClick={() => setShowSetup(true)}
           style={{
             marginLeft: 16, padding: "5px 14px", borderRadius: 20,
+            border: "1px solid #3b82f6", background: "rgba(59,130,246,.15)",
+            color: "#93c5fd", fontSize: 12, cursor: "pointer", fontWeight: 600,
+          }}
+          title="Camera &amp; zone setup wizard"
+        >
+          ⚙ Setup
+        </button>
+
+        <button
+          onClick={() => setShowZoneEditor(true)}
+          style={{
+            padding: "5px 14px", borderRadius: 20,
             border: "1px solid #4b5563", background: "transparent",
             color: "#d1d5db", fontSize: 12, cursor: "pointer", fontWeight: 500,
           }}

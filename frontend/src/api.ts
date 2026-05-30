@@ -209,3 +209,29 @@ export async function fetchRepeatOffenders(): Promise<WorkerRisk[]> {
   if (!res.ok) throw new Error("Failed to fetch repeat offenders");
   return res.json();
 }
+
+// ── Camera discovery ──────────────────────────────────────────────────────────
+
+export interface CameraInfo {
+  index: number;
+  label: string;
+  width: number;
+  height: number;
+}
+
+export async function fetchCameras(): Promise<CameraInfo[]> {
+  const res = await apiFetch("/cameras");
+  if (!res.ok) throw new Error("Failed to list cameras");
+  return res.json();
+}
+
+/** Fetch a JPEG snapshot from camera `index` and return a blob: URL. */
+export async function fetchCameraSnapshot(index: number): Promise<string> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/cameras/${index}/snapshot`, { headers });
+  if (!res.ok) throw new Error(`Snapshot for camera ${index} failed`);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
