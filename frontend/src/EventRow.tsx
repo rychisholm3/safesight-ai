@@ -47,15 +47,34 @@ export function EventRow({ event }: Props) {
         </div>
       </div>
 
-      <div style={{ textAlign: "right", flexShrink: 0 }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            color: isOpen ? (isPpe ? "#856404" : "#842029") : "#666",
-          }}
-        >
-          {isOpen ? "ACTIVE" : "CLOSED"}
+      <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: "1px 6px",
+              borderRadius: 4,
+              background: event.severity === "CRITICAL" ? "#dc3545" : "#f0a500",
+              color: "#fff",
+              letterSpacing: 0.5,
+              textTransform: "uppercase",
+            }}
+          >
+            {event.severity ?? (isPpe ? "WARNING" : "CRITICAL")}
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              padding: "1px 6px",
+              borderRadius: 4,
+              background: isOpen ? "#1a1a2e" : "#d1d5db",
+              color: isOpen ? "#fff" : "#666",
+            }}
+          >
+            {isOpen ? "ACTIVE" : "CLOSED"}
+          </span>
         </div>
         <div style={{ fontSize: 11, color: "#888" }}>{timeStr(event.created_at)}</div>
       </div>

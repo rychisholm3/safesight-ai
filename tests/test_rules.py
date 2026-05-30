@@ -181,3 +181,32 @@ class TestMultiPerson:
     def test_no_tracked_objects_returns_empty(self) -> None:
         engine = RulesEngine(BASIC_CONFIG)
         assert engine.check([], [], FRAME_ID) == []
+
+
+# ---------------------------------------------------------------------------
+# Severity
+# ---------------------------------------------------------------------------
+
+class TestSeverity:
+    def test_missing_ppe_is_warning(self) -> None:
+        engine = RulesEngine(BASIC_CONFIG)
+        violations = engine.check([person()], [], FRAME_ID)
+        ppe_v = [v for v in violations if v.type == "missing_ppe"]
+        assert all(v.severity == "WARNING" for v in ppe_v)
+
+    def test_zone_intrusion_is_critical(self) -> None:
+        engine = RulesEngine(BASIC_CONFIG)
+        p = person(x1=150, y1=100, x2=250, y2=300)
+        dets = [det(160, 110, 200, 150, "hardhat"), det(160, 160, 200, 200, "vest")]
+        violations = engine.check([p], dets, FRAME_ID)
+        zone_v = [v for v in violations if v.type == "zone_intrusion"]
+        assert all(v.severity == "CRITICAL" for v in zone_v)
+
+    def test_require_ppe_zone_violation_is_warning(self) -> None:
+        zone = ZoneConfig(id="weld", name="Weld bay",
+                          polygon=[(100, 100), (300, 100), (300, 300), (100, 300)],
+                          rule="require_ppe", required_ppe=["hardhat", "face_shield"])
+        engine = RulesEngine(SceneConfig(required_ppe=[], zones=[zone]))
+        p = person(x1=150, y1=100, x2=250, y2=300)
+        violations = engine.check([p], [det(160, 110, 200, 150, "hardhat")], FRAME_ID)
+        assert violations[0].severity == "WARNING"

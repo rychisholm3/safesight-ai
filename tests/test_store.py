@@ -19,6 +19,7 @@ def make_event(**kwargs) -> Event:
         start_frame=0,
         end_frame=None,
         snapshot_path=None,
+        severity="WARNING",
     )
     defaults.update(kwargs)
     return Event(**defaults)
@@ -134,6 +135,39 @@ class TestGetEvents:
 
     def test_empty_returns_empty_list(self, store):
         assert store.get_events() == []
+
+
+class TestSeverity:
+    def test_severity_persisted(self, store):
+        store.save_event(make_event(severity="CRITICAL", event_type="zone_intrusion"))
+        rows = store.get_events()
+        assert rows[0]["severity"] == "CRITICAL"
+
+    def test_default_severity_warning(self, store):
+        store.save_event(make_event())
+        rows = store.get_events()
+        assert rows[0]["severity"] == "WARNING"
+
+    def test_migration_adds_severity_column(self, tmp_path):
+        import sqlite3
+        db_path = tmp_path / "old.db"
+        # Simulate an old DB without severity column
+        conn = sqlite3.connect(str(db_path))
+        conn.execute("""
+            CREATE TABLE events (
+                event_id TEXT PRIMARY KEY, event_type TEXT NOT NULL,
+                track_id INTEGER NOT NULL, zone_id TEXT,
+                missing_ppe TEXT NOT NULL DEFAULT '[]',
+                start_frame INTEGER NOT NULL, end_frame INTEGER,
+                snapshot_path TEXT, created_at TEXT NOT NULL
+            )
+        """)
+        conn.commit()
+        conn.close()
+        # Opening EventStore should migrate without error
+        with EventStore(db_path, tmp_path / "snaps") as store:
+            store.save_event(make_event())
+            assert store.get_events()[0]["severity"] == "WARNING"
 
 
 class TestContextManager:

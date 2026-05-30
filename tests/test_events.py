@@ -9,12 +9,14 @@ COOL_DUR = 2.0  # → 30 frames at 15fps
 
 
 def make_violation(track_id: int = 1, frame_id: int = 0, v_type: str = "missing_ppe",
-                   zone_id: str | None = None, missing_ppe: list[str] | None = None) -> Violation:
+                   zone_id: str | None = None, missing_ppe: list[str] | None = None,
+                   severity: str = "WARNING") -> Violation:
     return Violation(
         type=v_type,
         track_id=track_id,
         frame_id=frame_id,
         bbox=(0, 0, 100, 200),
+        severity=severity,
         zone_id=zone_id,
         missing_ppe=missing_ppe or ["hardhat"],
     )
@@ -31,6 +33,7 @@ def feed(debouncer: EventDebouncer, violation: Violation | None, count: int,
                 track_id=violation.track_id,
                 frame_id=start_frame + i,
                 bbox=violation.bbox,
+                severity=violation.severity,
                 zone_id=violation.zone_id,
                 missing_ppe=list(violation.missing_ppe),
             )
@@ -188,6 +191,17 @@ class TestEventFields:
         d = EventDebouncer(fps=FPS, min_duration=MIN_DUR, cooldown_duration=COOL_DUR)
         opened, _ = feed(d, make_violation(), d._min_frames)
         assert opened[0].snapshot_path is None
+
+    def test_severity_carried_from_violation(self):
+        d = EventDebouncer(fps=FPS, min_duration=MIN_DUR, cooldown_duration=COOL_DUR)
+        v = make_violation(v_type="zone_intrusion", zone_id="z1", severity="CRITICAL")
+        opened, _ = feed(d, v, d._min_frames)
+        assert opened[0].severity == "CRITICAL"
+
+    def test_warning_severity_carried(self):
+        d = EventDebouncer(fps=FPS, min_duration=MIN_DUR, cooldown_duration=COOL_DUR)
+        opened, _ = feed(d, make_violation(severity="WARNING"), d._min_frames)
+        assert opened[0].severity == "WARNING"
 
     def test_reopen_after_close(self):
         d = EventDebouncer(fps=FPS, min_duration=MIN_DUR, cooldown_duration=COOL_DUR)

@@ -21,6 +21,7 @@ class Event:
     start_frame: int
     end_frame: int | None           # None while the violation is still active
     snapshot_path: Path | None      # filled in by store.py
+    severity: str = "WARNING"       # "WARNING" | "CRITICAL"
 
 
 @dataclass
@@ -83,6 +84,7 @@ class EventDebouncer:
                     start_frame=frame_id - self._min_frames + 1,
                     end_frame=None,
                     snapshot_path=None,
+                    severity=violation.severity,
                 )
                 state.active_event = event
                 state.pending_frames = 0

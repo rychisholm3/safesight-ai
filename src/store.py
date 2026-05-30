@@ -18,11 +18,16 @@ CREATE TABLE IF NOT EXISTS events (
     track_id      INTEGER NOT NULL,
     zone_id       TEXT,
     missing_ppe   TEXT NOT NULL DEFAULT '[]',
+    severity      TEXT NOT NULL DEFAULT 'WARNING',
     start_frame   INTEGER NOT NULL,
     end_frame     INTEGER,
     snapshot_path TEXT,
     created_at    TEXT NOT NULL
 )
+"""
+
+_MIGRATE_ADD_SEVERITY = """
+ALTER TABLE events ADD COLUMN severity TEXT NOT NULL DEFAULT 'WARNING'
 """
 
 
@@ -36,7 +41,15 @@ class EventStore:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute(_CREATE_TABLE)
         self._conn.commit()
+        self._migrate()
         logger.info("EventStore ready: db=%s snapshots=%s", db_path, snapshot_dir)
+
+    def _migrate(self) -> None:
+        cols = {row[1] for row in self._conn.execute("PRAGMA table_info(events)")}
+        if "severity" not in cols:
+            self._conn.execute(_MIGRATE_ADD_SEVERITY)
+            self._conn.commit()
+            logger.info("DB migrated: added severity column")
 
     def save_event(self, event: Event, frame: np.ndarray | None = None) -> None:
         """Insert or update the event row. Writes a snapshot JPEG if frame is provided."""
@@ -50,8 +63,8 @@ class EventStore:
             """
             INSERT INTO events
                 (event_id, event_type, track_id, zone_id, missing_ppe,
-                 start_frame, end_frame, snapshot_path, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 severity, start_frame, end_frame, snapshot_path, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(event_id) DO UPDATE SET
                 end_frame     = excluded.end_frame,
                 snapshot_path = excluded.snapshot_path
@@ -62,6 +75,7 @@ class EventStore:
                 event.track_id,
                 event.zone_id,
                 json.dumps(event.missing_ppe),
+                event.severity,
                 event.start_frame,
                 event.end_frame,
                 str(event.snapshot_path) if event.snapshot_path else None,

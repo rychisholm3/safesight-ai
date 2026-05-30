@@ -12,6 +12,7 @@ export default function App() {
   const [showZoneEditor, setShowZoneEditor] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion">("all");
+  const [severityFilter, setSeverityFilter] = useState<"all" | "WARNING" | "CRITICAL">("all");
   const [connected, setConnected] = useState(false);
 
   const refreshStats = useCallback(() => {
@@ -42,7 +43,9 @@ export default function App() {
   });
 
   const visible = events.filter(
-    (e) => filter === "all" || e.event_type === filter
+    (e) =>
+      (filter === "all" || e.event_type === filter) &&
+      (severityFilter === "all" || e.severity === severityFilter)
   );
 
   return (
@@ -123,6 +126,28 @@ export default function App() {
             }}
           >
             {f === "all" ? "All" : f === "missing_ppe" ? "Missing PPE" : "Zone Intrusion"}
+          </button>
+        ))}
+        <span style={{ color: "#d1d5db", margin: "0 4px" }}>|</span>
+        <span style={{ fontSize: 13, color: "#555", marginRight: 4 }}>Severity:</span>
+        {(["all", "CRITICAL", "WARNING"] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setSeverityFilter(s)}
+            style={{
+              padding: "4px 12px",
+              borderRadius: 20,
+              border: `1px solid ${s === "CRITICAL" ? "#dc3545" : s === "WARNING" ? "#f0a500" : "#d1d5db"}`,
+              background: severityFilter === s
+                ? (s === "CRITICAL" ? "#dc3545" : s === "WARNING" ? "#f0a500" : "#1a1a2e")
+                : "#fff",
+              color: severityFilter === s ? "#fff" : (s === "CRITICAL" ? "#dc3545" : s === "WARNING" ? "#f0a500" : "#374151"),
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: severityFilter === s ? 700 : 400,
+            }}
+          >
+            {s === "all" ? "All" : s}
           </button>
         ))}
         <span style={{ marginLeft: "auto", fontSize: 12, color: "#9ca3af" }}>

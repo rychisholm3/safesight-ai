@@ -48,6 +48,7 @@ class Violation:
     track_id: int
     frame_id: int
     bbox: tuple[int, int, int, int]
+    severity: str = "WARNING"          # "WARNING" | "CRITICAL"
     zone_id: str | None = None
     missing_ppe: list[str] = field(default_factory=list)
 
@@ -102,6 +103,7 @@ class RulesEngine:
                     track_id=person.track_id,
                     frame_id=frame_id,
                     bbox=person.bbox,
+                    severity="WARNING",
                     missing_ppe=missing,
                 ))
 
@@ -115,6 +117,7 @@ class RulesEngine:
                         track_id=person.track_id,
                         frame_id=frame_id,
                         bbox=person.bbox,
+                        severity="CRITICAL",
                         zone_id=zone.id,
                     ))
                 elif zone.rule == "require_ppe":
@@ -125,6 +128,7 @@ class RulesEngine:
                             track_id=person.track_id,
                             frame_id=frame_id,
                             bbox=person.bbox,
+                            severity="WARNING",
                             zone_id=zone.id,
                             missing_ppe=zone_missing,
                         ))

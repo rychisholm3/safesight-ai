@@ -30,6 +30,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from src.alerts import WebhookAlerter
 from src.api.ws import broadcaster
 from src.detector import Detector
 from src.events import EventDebouncer
@@ -131,6 +132,7 @@ def run(
     confidence: float,
     imgsz: int,
     sahi: bool,
+    webhook_url: str | None = None,
 ) -> None:
     # ── Setup ─────────────────────────────────────────────────────────────────
     scene = SceneConfig.from_json(config_path)
@@ -142,6 +144,7 @@ def run(
     rules    = RulesEngine(scene)
     debouncer = EventDebouncer(fps=fps)
     store    = EventStore(db_path=db_path, snapshot_dir=snapshot_dir)
+    alerter  = WebhookAlerter(webhook_url) if webhook_url else None
 
     zone_polys = {
         z.id: np.array(z.polygon, dtype=np.int32) for z in scene.zones
@@ -195,9 +198,11 @@ def run(
             for event in opened:
                 store.save_event(event, frame)
                 broadcaster.publish(event, "opened")
+                if alerter:
+                    alerter.send(event)
                 logger.info(
-                    "VIOLATION OPENED  type=%-16s track=#%d zone=%s missing=%s",
-                    event.event_type, event.track_id,
+                    "VIOLATION OPENED  type=%-16s severity=%-8s track=#%d zone=%s missing=%s",
+                    event.event_type, event.severity, event.track_id,
                     event.zone_id or "—", event.missing_ppe or "—",
                 )
 
@@ -248,6 +253,8 @@ def run(
     source.release()
     if writer:
         writer.release()
+    if alerter:
+        alerter.shutdown(wait=True)
     cv2.destroyAllWindows()
     logger.info("Pipeline shut down cleanly after %d frames", frame_id)
 
@@ -279,11 +286,16 @@ def _parse_args() -> argparse.Namespace:
                    help="Enable sliced inference — best for distant workers, costs ~3× FPS")
     p.add_argument("--no-display", action="store_true",
                    help="Suppress live display window (for headless / server use)")
+    p.add_argument("--webhook-url", default=None,
+                   help="HTTP endpoint to POST violation events to (optional). "
+                        "Can also be set via SAFESIGHT_WEBHOOK_URL env var.")
     return p.parse_args()
 
 
 if __name__ == "__main__":
+    import os
     args = _parse_args()
+    webhook = args.webhook_url or os.environ.get("SAFESIGHT_WEBHOOK_URL")
     try:
         run(
             source_uri   = args.source,
@@ -296,6 +308,7 @@ if __name__ == "__main__":
             confidence   = args.confidence,
             imgsz        = args.imgsz,
             sahi         = args.sahi,
+            webhook_url  = webhook,
         )
     except KeyboardInterrupt:
         sys.exit(0)
