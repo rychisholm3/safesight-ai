@@ -32,7 +32,7 @@ import numpy as np
 
 from src.alerts import WebhookAlerter
 from src.api.ws import broadcaster
-from src.detector import Detector
+from src.detector import Detection, Detector
 from src.events import EventDebouncer
 from src.reader import FrameReader
 from src.rules import RulesEngine, SceneConfig
@@ -119,6 +119,43 @@ def _annotate(
     return out
 
 
+# ── Person inference from head detections ─────────────────────────────────────
+
+def _persons_from_heads(
+    head_dets: list[Detection],
+    frame_w: int,
+    frame_h: int,
+    frame_id: int,
+) -> list[Detection]:
+    """Infer full-body bounding boxes from hardhat / no-hardhat detections.
+
+    The fine-tuned PPE model detects hardhats reliably (confidence 0.29–0.85)
+    but the ``Person`` class only fires at 0.07–0.15 — below any useful
+    threshold.  When head detections outnumber person detections we synthesise
+    person boxes by expanding each head bbox downward to cover the body
+    (≈ 7× head height) and slightly outward for shoulders.
+    """
+    persons: list[Detection] = []
+    for h in head_dets:
+        x1, y1, x2, y2 = h.bbox
+        head_h = max(y2 - y1, 1)
+        head_w = max(x2 - x1, 1)
+        body_h = int(head_h * 6)       # typical person ≈ 7× head height
+        shoulder_pad = head_w // 3     # widen slightly for shoulders
+        px1 = max(0, x1 - shoulder_pad)
+        px2 = min(frame_w, x2 + shoulder_pad)
+        py2 = min(frame_h, y2 + body_h)
+        persons.append(
+            Detection(
+                bbox=(px1, y1, px2, py2),
+                class_name="person",
+                confidence=h.confidence,
+                frame_id=frame_id,
+            )
+        )
+    return persons
+
+
 # ── Pipeline ──────────────────────────────────────────────────────────────────
 
 def run(
@@ -190,6 +227,17 @@ def run(
             detections  = detector.detect(frame, frame_id)
             # Only track persons; pass all detections to rules for PPE overlap
             person_dets = [d for d in detections if d.class_name == "person"]
+            head_dets   = [d for d in detections if d.class_name in ("hardhat", "no-hardhat")]
+
+            # Fallback: when head detections outnumber person detections, the
+            # fine-tuned model's Person class is likely below threshold.  Infer
+            # body bounding boxes from hardhat positions so the tracker gets
+            # real targets to follow and the rules engine can check PPE.
+            if len(head_dets) > len(person_dets):
+                person_dets = _persons_from_heads(
+                    head_dets, frame.shape[1], frame.shape[0], frame_id
+                )
+
             tracked     = tracker.update(person_dets, frame_id)
             violations  = rules.check(tracked, detections, frame_id)
             opened, closed = debouncer.update(violations, frame_id)

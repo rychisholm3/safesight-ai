@@ -42,11 +42,17 @@ class FileSource(VideoSource):
         self._cap = cv2.VideoCapture(str(path))
         if not self._cap.isOpened():
             raise FileNotFoundError(f"Cannot open video file: {path}")
+        raw_fps = self._cap.get(cv2.CAP_PROP_FPS)
         self._info = SourceInfo(
-            fps=self._cap.get(cv2.CAP_PROP_FPS),
+            fps=raw_fps if raw_fps > 0 else 30.0,
             width=int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
             height=int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
         )
+        # Rate-limit reads to the video's native FPS so the FrameReader queue
+        # doesn't fill instantly, causing frames to be dropped and the video
+        # to appear sped up.
+        self._frame_interval: float = 1.0 / self._info.fps
+        self._next_read_time: float | None = None
         logger.info(
             "Opened file source: %s (%dx%d @ %.1f fps)",
             path, self._info.width, self._info.height, self._info.fps,
@@ -57,9 +63,22 @@ class FileSource(VideoSource):
         return self._info
 
     def read(self) -> tuple[bool, np.ndarray]:
+        # Throttle to source FPS — without this, H.264 decodes at 200-300 fps,
+        # fills the bounded queue, and the pipeline skips frames, making the
+        # video look 6-10× sped up.
+        now = time.perf_counter()
+        if self._next_read_time is None:
+            self._next_read_time = now + self._frame_interval
+        else:
+            wait = self._next_read_time - now
+            if wait > 0:
+                time.sleep(wait)
+            self._next_read_time += self._frame_interval
+
         ok, frame = self._cap.read()
         if not ok and self._loop:
             self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            self._next_read_time = None  # reset timing on loop
             ok, frame = self._cap.read()
         if not ok:
             return False, np.empty(0, dtype=np.uint8)
