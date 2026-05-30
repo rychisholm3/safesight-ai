@@ -22,6 +22,9 @@ from src.notifications.db import NotificationDB
 from src.notifications.dispatcher import NotificationDispatcher
 from src.notifications.router import _get_notification_db
 from src.notifications.router import router as notifications_router
+from src.risk.engine import RiskEngine
+from src.risk.router import _get_risk_engine
+from src.risk.router import router as risk_router
 from src.store import EventStore
 
 
@@ -67,6 +70,7 @@ _shared_conn.row_factory = sqlite3.Row
 _store: EventStore       = EventStore(db_path=_DB_PATH, snapshot_dir=_SNAPSHOT_DIR)
 auth_db: AuthDB          = AuthDB(_shared_conn)
 notification_db: NotificationDB = NotificationDB(_shared_conn)
+risk_engine: RiskEngine  = RiskEngine(_shared_conn)
 
 _notification_dispatcher = NotificationDispatcher(
     notification_db  = notification_db,
@@ -84,6 +88,10 @@ def _get_notification_db_impl() -> NotificationDB:
     return notification_db
 
 
+def _get_risk_engine_impl() -> RiskEngine:
+    return risk_engine
+
+
 StoreDep = Annotated[EventStore, Depends(get_store)]
 
 # ---------------------------------------------------------------------------
@@ -91,7 +99,9 @@ StoreDep = Annotated[EventStore, Depends(get_store)]
 # ---------------------------------------------------------------------------
 app.include_router(auth_router)
 app.include_router(notifications_router)
+app.include_router(risk_router)
 app.dependency_overrides[_get_notification_db] = _get_notification_db_impl
+app.dependency_overrides[_get_risk_engine]     = _get_risk_engine_impl
 
 
 # ---------------------------------------------------------------------------

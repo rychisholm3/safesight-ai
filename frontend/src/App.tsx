@@ -7,6 +7,7 @@ import { EventRow } from "./EventRow";
 import { ZoneEditor } from "./ZoneEditor";
 import { LoginPage } from "./LoginPage";
 import { SettingsPage } from "./SettingsPage";
+import { RiskPanel } from "./RiskPanel";
 
 const MAX_EVENTS = 200;
 
@@ -41,6 +42,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
   const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion">("all");
   const [severityFilter, setSeverityFilter] = useState<"all" | "WARNING" | "CRITICAL">("all");
   const [connected, setConnected] = useState(false);
+  const [view, setView] = useState<"events" | "risk">("events");
 
   const refreshStats = useCallback(() => {
     fetchStats().then(setStats).catch(() => {});
@@ -170,70 +172,83 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
           borderBottom: "1px solid #e5e7eb",
         }}
       >
-        <span style={{ fontSize: 13, color: "#555", marginRight: 4 }}>Filter:</span>
-        {(["all", "missing_ppe", "zone_intrusion"] as const).map((f) => (
+        {/* View toggle */}
+        {(["events", "risk"] as const).map((v) => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
+            key={v}
+            onClick={() => setView(v)}
             style={{
-              padding: "4px 12px",
-              borderRadius: 20,
+              padding: "4px 14px", borderRadius: 20,
               border: "1px solid #d1d5db",
-              background: filter === f ? "#1a1a2e" : "#fff",
-              color: filter === f ? "#fff" : "#374151",
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: filter === f ? 600 : 400,
+              background: view === v ? "#1a1a2e" : "#fff",
+              color: view === v ? "#fff" : "#374151",
+              cursor: "pointer", fontSize: 12,
+              fontWeight: view === v ? 600 : 400,
             }}
           >
-            {f === "all" ? "All" : f === "missing_ppe" ? "Missing PPE" : "Zone Intrusion"}
+            {v === "events" ? "Events" : "Risk"}
           </button>
         ))}
-        <span style={{ color: "#d1d5db", margin: "0 4px" }}>|</span>
-        <span style={{ fontSize: 13, color: "#555", marginRight: 4 }}>Severity:</span>
-        {(["all", "CRITICAL", "WARNING"] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => setSeverityFilter(s)}
-            style={{
-              padding: "4px 12px",
-              borderRadius: 20,
-              border: `1px solid ${s === "CRITICAL" ? "#dc3545" : s === "WARNING" ? "#f0a500" : "#d1d5db"}`,
-              background: severityFilter === s
-                ? (s === "CRITICAL" ? "#dc3545" : s === "WARNING" ? "#f0a500" : "#1a1a2e")
-                : "#fff",
-              color: severityFilter === s ? "#fff" : (s === "CRITICAL" ? "#dc3545" : s === "WARNING" ? "#f0a500" : "#374151"),
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: severityFilter === s ? 700 : 400,
-            }}
-          >
-            {s === "all" ? "All" : s}
-          </button>
-        ))}
-        <span style={{ marginLeft: "auto", fontSize: 12, color: "#9ca3af" }}>
-          {visible.length} event{visible.length !== 1 ? "s" : ""}
-        </span>
+
+        {view === "events" && (
+          <>
+            <span style={{ color: "#d1d5db", margin: "0 4px" }}>|</span>
+            <span style={{ fontSize: 13, color: "#555", marginRight: 4 }}>Filter:</span>
+            {(["all", "missing_ppe", "zone_intrusion"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding: "4px 12px", borderRadius: 20,
+                  border: "1px solid #d1d5db",
+                  background: filter === f ? "#1a1a2e" : "#fff",
+                  color: filter === f ? "#fff" : "#374151",
+                  cursor: "pointer", fontSize: 12,
+                  fontWeight: filter === f ? 600 : 400,
+                }}
+              >
+                {f === "all" ? "All" : f === "missing_ppe" ? "Missing PPE" : "Zone Intrusion"}
+              </button>
+            ))}
+            <span style={{ color: "#d1d5db", margin: "0 4px" }}>|</span>
+            <span style={{ fontSize: 13, color: "#555", marginRight: 4 }}>Severity:</span>
+            {(["all", "CRITICAL", "WARNING"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSeverityFilter(s)}
+                style={{
+                  padding: "4px 12px", borderRadius: 20,
+                  border: `1px solid ${s === "CRITICAL" ? "#dc3545" : s === "WARNING" ? "#f0a500" : "#d1d5db"}`,
+                  background: severityFilter === s
+                    ? (s === "CRITICAL" ? "#dc3545" : s === "WARNING" ? "#f0a500" : "#1a1a2e")
+                    : "#fff",
+                  color: severityFilter === s ? "#fff"
+                    : (s === "CRITICAL" ? "#dc3545" : s === "WARNING" ? "#f0a500" : "#374151"),
+                  cursor: "pointer", fontSize: 12,
+                  fontWeight: severityFilter === s ? 700 : 400,
+                }}
+              >
+                {s === "all" ? "All" : s}
+              </button>
+            ))}
+            <span style={{ marginLeft: "auto", fontSize: 12, color: "#9ca3af" }}>
+              {visible.length} event{visible.length !== 1 ? "s" : ""}
+            </span>
+          </>
+        )}
       </div>
 
-      {/* Event list */}
-      <div style={{ padding: "16px 24px", maxWidth: 860, margin: "0 auto" }}>
-        {visible.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "60px 0",
-              color: "#9ca3af",
-              fontSize: 15,
-            }}
-          >
+      {/* Main content */}
+      <div style={{ padding: "16px 24px", maxWidth: 900, margin: "0 auto" }}>
+        {view === "risk" ? (
+          <RiskPanel />
+        ) : visible.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "#9ca3af", fontSize: 15 }}>
             {connected ? "No events yet — pipeline is watching." : "Connecting to SafeSight…"}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {visible.map((e) => (
-              <EventRow key={e.event_id} event={e} />
-            ))}
+            {visible.map((e) => <EventRow key={e.event_id} event={e} />)}
           </div>
         )}
       </div>

@@ -157,3 +157,55 @@ export async function saveNotificationPrefs(
   if (!res.ok) throw new Error("Failed to save notification preferences");
   return res.json();
 }
+
+// ── Risk engine ───────────────────────────────────────────────────────────────
+
+export interface ZoneRisk {
+  zone_id: string;
+  risk_score: number;
+  risk_level: "LOW" | "ELEVATED" | "HIGH" | "CRITICAL";
+  trend: "RISING" | "STABLE" | "FALLING";
+  trend_pct: number;
+  violations_24h: number;
+  violations_7d: number;
+  violations_prev_7d: number;
+  is_rising: boolean;
+  computed_at: string;
+}
+
+export interface WorkerRisk {
+  track_id: number;
+  violation_count: number;
+  violations_24h: number;
+  most_common_type: string;
+  most_common_zone: string | null;
+  is_repeat_offender: boolean;
+}
+
+export interface RiskSummary {
+  overall_risk_level: string;
+  overall_risk_score: number;
+  total_violations_24h: number;
+  total_violations_7d: number;
+  rising_risk_zones: string[];
+  repeat_offender_count: number;
+  highest_risk_zone: string | null;
+}
+
+export async function fetchZoneRisks(): Promise<ZoneRisk[]> {
+  const res = await apiFetch("/risk/zones");
+  if (!res.ok) throw new Error("Failed to fetch zone risks");
+  return res.json();
+}
+
+export async function fetchRiskSummary(): Promise<RiskSummary> {
+  const res = await apiFetch("/risk/summary");
+  if (!res.ok) throw new Error("Failed to fetch risk summary");
+  return res.json();
+}
+
+export async function fetchRepeatOffenders(): Promise<WorkerRisk[]> {
+  const res = await apiFetch("/risk/workers/offenders");
+  if (!res.ok) throw new Error("Failed to fetch repeat offenders");
+  return res.json();
+}
