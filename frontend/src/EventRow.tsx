@@ -65,9 +65,15 @@ export function EventRow({ event }: Props) {
             {" · "}frame {event.start_frame}
             {event.end_frame !== null ? `–${event.end_frame}` : "+"}
           </div>
-          {/* OSHA citation hint */}
-          <div style={{ fontSize: 10, color: "#6b7280", marginTop: 3, fontFamily: "monospace" }}>
-            ⚖ {oshaHint(event)} — click for details
+          {/* OSHA citation + fine hint */}
+          <div style={{ fontSize: 10, color: "#6b7280", marginTop: 3, fontFamily: "monospace", display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <span>⚖ {oshaHint(event)}</span>
+            {event.fine_max_usd > 0 && (
+              <span style={{ color: "#92400e", fontWeight: 700, fontFamily: "system-ui" }}>
+                up to ${event.fine_max_usd.toLocaleString()}
+              </span>
+            )}
+            <span style={{ color: "#9ca3af", fontFamily: "system-ui" }}>· click for full details</span>
           </div>
         </div>
 

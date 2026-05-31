@@ -268,10 +268,8 @@ export async function fetchVideoFiles(): Promise<VideoFileInfo[]> {
 export async function fetchOshaLookup(event: SafeEvent): Promise<OshaCode[]> {
   const qs = new URLSearchParams({ event_type: event.event_type });
   if (event.missing_ppe?.length) qs.set("missing_ppe", event.missing_ppe.join(","));
-  if (event.zone_id) {
-    // We don't store zone_rule on the event, so use a sensible default
-    qs.set("zone_rule", event.event_type === "zone_intrusion" ? "no_entry" : "require_ppe");
-  }
+  // Use the stored zone_rule (now saved on every zone event at detection time)
+  if (event.zone_rule) qs.set("zone_rule", event.zone_rule);
   const res = await apiFetch(`/osha/lookup?${qs}`);
   if (!res.ok) throw new Error("Failed to fetch OSHA codes");
   return res.json();

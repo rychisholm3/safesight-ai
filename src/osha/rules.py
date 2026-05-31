@@ -291,6 +291,292 @@ OSHA_DB: dict[str, OshaCode] = {
         reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.21",
     ),
 
+    # ── Fall Protection ──────────────────────────────────────────────────────
+
+    "1926.502(b)": OshaCode(
+        code="29 CFR 1926.502(b)",
+        title="Guardrail Systems",
+        description=(
+            "Guardrail systems and their use shall comply with the following provisions: "
+            "top rail height shall be 42 inches (plus or minus 3 inches) above the walking/working level; "
+            "midrails shall be installed at a height midway between the top edge of the guardrail system "
+            "and the walking/working level surface."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Install OSHA-compliant guardrail systems (42\" top rail ±3\") on all open-sided surfaces 6+ ft above lower level.",
+            "Inspect guardrails at the start of each shift for damage, displacement, or missing components.",
+            "Document guardrail installation on a site safety checklist before work begins on elevated surfaces.",
+            "Ensure midrails are installed between the top rail and working surface on all guardrail systems.",
+            "Train all workers on fall hazards and the importance of never removing or bypassing guardrail systems.",
+        ),
+        plain_english=(
+            "A worker was detected in an area where guardrail protection is required but may not be present. "
+            "29 CFR 1926.502(b) is the single most-cited OSHA standard in construction. Falls are the #1 "
+            "cause of construction fatalities — guardrails are the primary engineering control and must "
+            "be installed on all open-sided surfaces 6 feet or more above a lower level."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.502",
+    ),
+
+    "1926.502(d)": OshaCode(
+        code="29 CFR 1926.502(d)",
+        title="Personal Fall Arrest Systems",
+        description=(
+            "Personal fall arrest systems and their use shall comply with the following provisions: "
+            "when stopping a fall, a personal fall arrest system shall limit maximum arresting force "
+            "to 1,800 lbs; bring a worker to a complete stop within 3.5 feet of free fall."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Provide ANSI-rated full-body harnesses and self-retracting lanyards for all workers at heights.",
+            "Identify and mark suitable anchor points (capable of supporting 5,000 lbs per attached worker).",
+            "Conduct hands-on harness fitting and inspection training for all workers before elevated work.",
+            "Inspect all fall arrest equipment before each use; remove any damaged or worn components from service.",
+            "Establish a rescue plan for fallen workers — do not leave a suspended worker unattended.",
+        ),
+        plain_english=(
+            "In areas where guardrails are not feasible, personal fall arrest systems (full-body harness, "
+            "shock-absorbing lanyard, and anchor point) are mandatory for workers at heights of 6 feet or more. "
+            "OSHA requires that the system be rigged to prevent a free fall greater than 6 feet and be inspected "
+            "before every use."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.502",
+    ),
+
+    "1926.503": OshaCode(
+        code="29 CFR 1926.503",
+        title="Fall Protection Training Requirements",
+        description=(
+            "The employer shall provide a training programme for each employee who might be exposed to "
+            "fall hazards. The programme shall enable each employee to recognise the hazards of falling "
+            "and shall train each employee in the procedures to be followed in order to minimise these hazards."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Schedule mandatory fall protection training for all workers before they access elevated areas.",
+            "Cover: fall hazard recognition, correct use of guardrails and personal fall arrest systems, and rescue procedures.",
+            "Retain signed training records for each worker; retrain any worker observed using fall protection incorrectly.",
+            "Conduct retraining after any fall incident or near-miss involving fall hazards.",
+            "Include fall hazard information in the site-specific orientation for every new worker and subcontractor.",
+        ),
+        plain_english=(
+            "Workers detected in elevated or fall-hazard areas must have received documented fall protection training. "
+            "OSHA requires training to cover recognition of fall hazards, correct PPE use, and emergency procedures. "
+            "Without training, even correctly installed equipment may be misused — increasing, not decreasing, fall risk."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.503",
+    ),
+
+    # ── Scaffolding ──────────────────────────────────────────────────────────
+
+    "1926.451(g)": OshaCode(
+        code="29 CFR 1926.451(g)",
+        title="Scaffold Fall Protection",
+        description=(
+            "Each employee on a scaffold more than 10 feet above a lower level shall be protected "
+            "from falling to that lower level by the use of guardrail systems or personal fall arrest systems."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Install guardrails on all four sides of scaffold platforms above 10 feet.",
+            "Ensure scaffold planking is fully decked and secured with no gaps greater than 1 inch.",
+            "Check scaffold erection or modification was performed or supervised by a Competent Person.",
+            "Inspect scaffolding before each work shift and after any event that could affect structural integrity.",
+            "Do not allow scaffold use by more workers or materials than the platform is rated to support.",
+        ),
+        plain_english=(
+            "A worker was detected on or near scaffolding without adequate fall protection. Scaffolding "
+            "violations are consistently in OSHA's top 10 most-cited standards. Workers on platforms "
+            "above 10 feet require either guardrails or personal fall arrest systems — and the scaffold "
+            "must be erected, inspected, and tagged as safe by a Competent Person before use."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.451",
+    ),
+
+    # ── Excavation & Trenching ───────────────────────────────────────────────
+
+    "1926.652(a)": OshaCode(
+        code="29 CFR 1926.652(a)(1)",
+        title="Excavations — Employee Protection",
+        description=(
+            "Each employee in an excavation shall be protected from cave-ins by an adequate protective "
+            "system designed in accordance with 29 CFR 1926.652(b) or (c), except when excavations are "
+            "made entirely in stable rock or are less than 5 feet in depth and examination by a Competent "
+            "Person provides no indication of a potential cave-in."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Immediately remove all workers from unprotected excavations deeper than 5 feet.",
+            "Have a Competent Person classify the soil type and specify the required protective system (sloping, shoring, or trench box).",
+            "Install the approved protective system before workers re-enter the excavation.",
+            "Inspect the excavation daily and after rain or other events that may increase hazard.",
+            "Establish and mark safe access/egress routes (ladders, ramps) within 25 feet of all workers.",
+        ),
+        plain_english=(
+            "A worker was detected near or in an excavation area. Cave-ins kill an average of two workers "
+            "per month in the US — they strike without warning and 1 cubic yard of soil weighs over a ton. "
+            "OSHA requires a Competent Person to classify soil and specify a protective system before any "
+            "worker enters an excavation 5 feet or deeper. No exceptions."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.652",
+    ),
+
+    # ── Electrical Safety ────────────────────────────────────────────────────
+
+    "1926.416(a)": OshaCode(
+        code="29 CFR 1926.416(a)(1)",
+        title="Electrical — General Requirements",
+        description=(
+            "No employer shall permit an employee to work in such proximity to any part of an electric "
+            "power circuit that the employee could contact the electric power circuit in the course of work, "
+            "unless the employee is protected against electric shock by de-energising the circuit and "
+            "grounding it or by guarding it effectively by insulation or other means."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Establish and enforce an Electrical Safety Program including lockout/tagout (LOTO) procedures.",
+            "Mark all energised electrical equipment and overhead power line locations clearly on site maps.",
+            "Maintain OSHA-required approach distances from overhead power lines (minimum 10 ft for lines up to 50kV).",
+            "Ensure all temporary wiring uses GFCI protection; inspect cords and equipment daily.",
+            "Provide arc-flash rated PPE (gloves, face shield, insulated tools) for any work near energised circuits.",
+        ),
+        plain_english=(
+            "A worker was detected near electrical infrastructure or restricted electrical equipment areas. "
+            "Electrocution is one of OSHA's 'Fatal Four' construction hazards. Work near energised circuits "
+            "requires LOTO procedures, approach distance controls, and arc-rated PPE — all documented in a "
+            "written electrical safety program."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.416",
+    ),
+
+    # ── Ladders ─────────────────────────────────────────────────────────────
+
+    "1926.1053(b)": OshaCode(
+        code="29 CFR 1926.1053(b)",
+        title="Ladders — Use Requirements",
+        description=(
+            "When portable ladders are used for access to an upper landing surface, the ladder side rails "
+            "shall extend at least 3 feet above the upper landing surface; the ladder shall be secured. "
+            "Employees shall face the ladder when ascending or descending."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Ensure ladder side rails extend at least 3 feet above each upper landing or access point.",
+            "Secure ladders at top and bottom to prevent displacement; use a spotter if securing is not possible.",
+            "Inspect ladders before each use; remove any ladder with cracks, broken rungs, or bent rails from service.",
+            "Train workers: one person per ladder, face the ladder when climbing, three-point contact at all times.",
+            "Do not use the top two rungs of a step ladder or the top three rungs of an extension ladder.",
+        ),
+        plain_english=(
+            "A worker was detected using or accessing a ladder. Ladder falls cause thousands of construction "
+            "injuries each year. OSHA requires ladders to be properly set up (1:4 angle ratio), secured, "
+            "extending 3 feet above access points, and used with three-point contact at all times. "
+            "Ladders must be inspected daily by a Competent Person."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.1053",
+    ),
+
+    # ── Confined Space ───────────────────────────────────────────────────────
+
+    "1910.146(c)": OshaCode(
+        code="29 CFR 1910.146(c)(1)",
+        title="Permit-Required Confined Spaces",
+        description=(
+            "The employer shall evaluate the workplace to determine if any spaces are permit-required "
+            "confined spaces. If the workplace contains permit spaces, the employer shall inform exposed "
+            "employees by posting danger signs or by any other equally effective means of the existence "
+            "and location of and the danger posed by the permit spaces."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Post 'DANGER — Confined Space — Do Not Enter' signs at all permit-required confined space openings.",
+            "Implement a written confined space entry programme with a permit system before any entry.",
+            "Test atmosphere for oxygen, flammable gases, and toxic contaminants before entry.",
+            "Station an attendant outside the confined space during all entries; have a rescue plan ready.",
+            "Provide entrants with all required PPE including supplied-air respirators if atmosphere is hazardous.",
+        ),
+        plain_english=(
+            "A worker was detected near or attempting to enter what may be a confined space. "
+            "Confined spaces — tanks, vaults, manholes, excavations — can contain oxygen-deficient or "
+            "toxic atmospheres that incapacitate a worker in seconds. OSHA requires atmospheric testing, "
+            "a written entry permit, an outside attendant, and a rescue plan before any worker enters."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.146",
+    ),
+
+    # ── Housekeeping & Walking-Working Surfaces ──────────────────────────────
+
+    "1926.25": OshaCode(
+        code="29 CFR 1926.25",
+        title="Housekeeping — Construction Sites",
+        description=(
+            "During the course of construction, alteration, or repairs, form and scrap lumber with protruding "
+            "nails, and all other debris, shall be kept cleared from work areas, passageways, and stairs in "
+            "and around buildings or other structures."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Assign daily housekeeping responsibilities to each crew; conduct end-of-shift cleanup.",
+            "Remove scrap lumber, protruding nails, and debris from all walkways and stairways immediately.",
+            "Place waste bins throughout the site; use designated collection areas for scrap material.",
+            "Keep access routes, emergency egress paths, and fire extinguisher locations clear at all times.",
+            "Include housekeeping in site safety inspections and pre-task safety plans.",
+        ),
+        plain_english=(
+            "Debris, scrap lumber with nails, and cluttered walkways are among the most common causes "
+            "of slips, trips, and puncture injuries on construction sites. OSHA requires work areas, "
+            "passageways, and stairs to be kept clear throughout the workday — not just during end-of-day cleanup."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.25",
+    ),
+
+    # ── Struck-By Hazards ────────────────────────────────────────────────────
+
+    "1926.602(a)": OshaCode(
+        code="29 CFR 1926.602(a)(9)(ii)",
+        title="Material Handling — Vehicles and Equipment",
+        description=(
+            "No person shall be permitted to stand or pass under elevated portions of any truck, crane, "
+            "shovel, derrick, or similar piece of equipment while any load is suspended."
+        ),
+        fine_min_usd=1_116,
+        fine_max_usd=15_625,
+        willful_max_usd=156_259,
+        corrective_actions=(
+            "Establish and enforce exclusion zones around cranes and lifting operations — use barricades or spotters.",
+            "Implement a tag-line policy: all suspended loads must be controlled with tag lines.",
+            "Require high-visibility vests for all workers near vehicle operating areas.",
+            "Use a designated signal person (rigger/dogman) for all lifting operations.",
+            "Conduct daily pre-lift meetings covering lift radius, exclusion zone boundaries, and emergency procedures.",
+        ),
+        plain_english=(
+            "A worker was detected in proximity to heavy equipment or vehicle operating areas. "
+            "Struck-by incidents involving cranes, forklifts, and other heavy equipment are among the "
+            "leading causes of construction fatalities. OSHA prohibits workers from standing or passing "
+            "under suspended loads and requires exclusion zones around operating equipment."
+        ),
+        reference_url="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.602",
+    ),
+
     # ── General Duty Clause ──────────────────────────────────────────────────
 
     "5(a)(1)": OshaCode(

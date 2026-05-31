@@ -22,6 +22,10 @@ class Event:
     end_frame: int | None           # None while the violation is still active
     snapshot_path: Path | None      # filled in by store.py
     severity: str = "WARNING"       # "WARNING" | "CRITICAL"
+    zone_rule: str | None = None    # "no_entry" | "require_ppe" | None
+    osha_codes: list[str] = field(default_factory=list)   # e.g. ["29 CFR 1926.100(a)"]
+    fine_min_usd: int = 0
+    fine_max_usd: int = 0
 
 
 @dataclass
@@ -85,6 +89,7 @@ class EventDebouncer:
                     end_frame=None,
                     snapshot_path=None,
                     severity=violation.severity,
+                    zone_rule=violation.zone_rule,
                 )
                 state.active_event = event
                 state.pending_frames = 0

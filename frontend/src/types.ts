@@ -3,12 +3,16 @@ export interface SafeEvent {
   event_type: "missing_ppe" | "zone_intrusion";
   track_id: number;
   zone_id: string | null;
+  zone_rule: string | null;
   missing_ppe: string[];
   severity: "WARNING" | "CRITICAL";
   start_frame: number;
   end_frame: number | null;
   snapshot_path: string | null;
   created_at: string;
+  osha_codes: string[];
+  fine_min_usd: number;
+  fine_max_usd: number;
 }
 
 export interface Zone {

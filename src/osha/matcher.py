@@ -25,8 +25,10 @@ _PPE_CODE_KEYS: dict[str, list[str]] = {
 }
 
 # ── Zone rule → primary OSHA code(s) ────────────────────────────────────────
+# no_entry zones: signage + safety training + general fall/struck-by context
+# require_ppe zones: PPE criteria + safety training
 _ZONE_CODE_KEYS: dict[str, list[str]] = {
-    "no_entry":    ["1926.200(a)", "1926.21(b)(2)"],
+    "no_entry":    ["1926.200(a)", "1926.21(b)(2)", "1926.602(a)"],
     "require_ppe": ["1926.95(a)",  "1926.21(b)(2)"],
     "_default":    ["1926.200(a)", "5(a)(1)"],
 }

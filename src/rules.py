@@ -50,6 +50,7 @@ class Violation:
     bbox: tuple[int, int, int, int]
     severity: str = "WARNING"          # "WARNING" | "CRITICAL"
     zone_id: str | None = None
+    zone_rule: str | None = None       # "no_entry" | "require_ppe" | None
     missing_ppe: list[str] = field(default_factory=list)
 
 
@@ -155,6 +156,7 @@ class RulesEngine:
                         bbox=person.bbox,
                         severity="CRITICAL",
                         zone_id=zone.id,
+                        zone_rule="no_entry",
                     ))
                 elif zone.rule == "require_ppe":
                     zone_missing = _missing_ppe(zone.required_ppe)
@@ -166,6 +168,7 @@ class RulesEngine:
                             bbox=person.bbox,
                             severity="WARNING",
                             zone_id=zone.id,
+                            zone_rule="require_ppe",
                             missing_ppe=zone_missing,
                         ))
 

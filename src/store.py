@@ -22,13 +22,25 @@ CREATE TABLE IF NOT EXISTS events (
     start_frame   INTEGER NOT NULL,
     end_frame     INTEGER,
     snapshot_path TEXT,
-    created_at    TEXT NOT NULL
+    created_at    TEXT NOT NULL,
+    zone_rule     TEXT,
+    osha_codes    TEXT NOT NULL DEFAULT '[]',
+    fine_min_usd  INTEGER NOT NULL DEFAULT 0,
+    fine_max_usd  INTEGER NOT NULL DEFAULT 0
 )
 """
 
 _MIGRATE_ADD_SEVERITY = """
 ALTER TABLE events ADD COLUMN severity TEXT NOT NULL DEFAULT 'WARNING'
 """
+
+_MIGRATIONS: list[tuple[str, str]] = [
+    ("severity",     "ALTER TABLE events ADD COLUMN severity TEXT NOT NULL DEFAULT 'WARNING'"),
+    ("zone_rule",    "ALTER TABLE events ADD COLUMN zone_rule TEXT"),
+    ("osha_codes",   "ALTER TABLE events ADD COLUMN osha_codes TEXT NOT NULL DEFAULT '[]'"),
+    ("fine_min_usd", "ALTER TABLE events ADD COLUMN fine_min_usd INTEGER NOT NULL DEFAULT 0"),
+    ("fine_max_usd", "ALTER TABLE events ADD COLUMN fine_max_usd INTEGER NOT NULL DEFAULT 0"),
+]
 
 
 class EventStore:
@@ -46,10 +58,11 @@ class EventStore:
 
     def _migrate(self) -> None:
         cols = {row[1] for row in self._conn.execute("PRAGMA table_info(events)")}
-        if "severity" not in cols:
-            self._conn.execute(_MIGRATE_ADD_SEVERITY)
-            self._conn.commit()
-            logger.info("DB migrated: added severity column")
+        for col_name, sql in _MIGRATIONS:
+            if col_name not in cols:
+                self._conn.execute(sql)
+                self._conn.commit()
+                logger.info("DB migrated: added %s column", col_name)
 
     def save_event(self, event: Event, frame: np.ndarray | None = None) -> None:
         """Insert or update the event row. Writes a snapshot JPEG if frame is provided."""
@@ -63,8 +76,9 @@ class EventStore:
             """
             INSERT INTO events
                 (event_id, event_type, track_id, zone_id, missing_ppe,
-                 severity, start_frame, end_frame, snapshot_path, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 severity, start_frame, end_frame, snapshot_path, created_at,
+                 zone_rule, osha_codes, fine_min_usd, fine_max_usd)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(event_id) DO UPDATE SET
                 end_frame     = excluded.end_frame,
                 snapshot_path = excluded.snapshot_path
@@ -80,6 +94,10 @@ class EventStore:
                 event.end_frame,
                 str(event.snapshot_path) if event.snapshot_path else None,
                 datetime.now(timezone.utc).isoformat(),
+                event.zone_rule,
+                json.dumps(event.osha_codes),
+                event.fine_min_usd,
+                event.fine_max_usd,
             ),
         )
         self._conn.commit()
@@ -123,7 +141,11 @@ class EventStore:
         ).fetchall()
 
         return [
-            {**dict(row), "missing_ppe": json.loads(row["missing_ppe"])}
+            {
+                **dict(row),
+                "missing_ppe": json.loads(row["missing_ppe"]),
+                "osha_codes":  json.loads(row["osha_codes"]) if row["osha_codes"] else [],
+            }
             for row in rows
         ]
 

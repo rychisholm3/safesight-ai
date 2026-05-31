@@ -34,6 +34,7 @@ from src.alerts import WebhookAlerter
 from src.api.ws import broadcaster
 from src.detector import Detection, Detector
 from src.events import EventDebouncer
+from src.osha.matcher import fine_range, match_violation
 from src.reader import FrameReader
 from src.rules import RulesEngine, SceneConfig
 from src.sources import open_source
@@ -241,6 +242,16 @@ def run(
             tracked     = tracker.update(person_dets, frame_id)
             violations  = rules.check(tracked, detections, frame_id)
             opened, closed = debouncer.update(violations, frame_id)
+
+            # ── Enrich opened events with OSHA codes ──────────────────────────
+            for event in opened:
+                codes = match_violation(
+                    event.event_type,
+                    missing_ppe=event.missing_ppe or None,
+                    zone_rule=event.zone_rule,
+                )
+                event.osha_codes = [c.code for c in codes]
+                event.fine_min_usd, event.fine_max_usd = fine_range(codes)
 
             # ── Persist & broadcast ───────────────────────────────────────────
             for event in opened:
