@@ -12,6 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.api.cameras import router as cameras_router
+from src.copilot.router import (
+    _get_event_store as _copilot_get_event_store,
+    _get_risk_engine as _copilot_get_risk_engine,
+    _get_zones_path  as _copilot_get_zones_path,
+    router as copilot_router,
+)
 from src.osha.router import router as osha_router
 from src.api.ws import broadcaster, websocket_endpoint
 from src.auth.db import AuthDB
@@ -104,8 +110,12 @@ app.include_router(notifications_router)
 app.include_router(risk_router)
 app.include_router(cameras_router)
 app.include_router(osha_router)
-app.dependency_overrides[_get_notification_db] = _get_notification_db_impl
-app.dependency_overrides[_get_risk_engine]     = _get_risk_engine_impl
+app.include_router(copilot_router)
+app.dependency_overrides[_get_notification_db]     = _get_notification_db_impl
+app.dependency_overrides[_get_risk_engine]         = _get_risk_engine_impl
+app.dependency_overrides[_copilot_get_event_store] = get_store
+app.dependency_overrides[_copilot_get_risk_engine] = _get_risk_engine_impl
+app.dependency_overrides[_copilot_get_zones_path]  = lambda: _ZONES_PATH
 
 
 # ---------------------------------------------------------------------------

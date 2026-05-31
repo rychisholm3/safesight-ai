@@ -7,6 +7,7 @@ import { EventRow } from "./EventRow";
 import { ZoneEditor } from "./ZoneEditor";
 import { LoginPage } from "./LoginPage";
 import { SettingsPage } from "./SettingsPage";
+import { CopilotPanel } from "./CopilotPanel";
 import { RiskPanel } from "./RiskPanel";
 import { SetupWizard } from "./SetupWizard";
 
@@ -46,7 +47,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
   const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion">("all");
   const [severityFilter, setSeverityFilter] = useState<"all" | "WARNING" | "CRITICAL">("all");
   const [connected, setConnected] = useState(false);
-  const [view, setView] = useState<"events" | "risk">("events");
+  const [view, setView] = useState<"events" | "risk" | "copilot">("events");
 
   const refreshStats = useCallback(() => {
     fetchStats().then(setStats).catch(() => {});
@@ -190,20 +191,20 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
         }}
       >
         {/* View toggle */}
-        {(["events", "risk"] as const).map((v) => (
+        {(["events", "risk", "copilot"] as const).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
             style={{
               padding: "4px 14px", borderRadius: 20,
-              border: "1px solid #d1d5db",
-              background: view === v ? "#1a1a2e" : "#fff",
-              color: view === v ? "#fff" : "#374151",
+              border: v === "copilot" ? "1px solid #3b82f6" : "1px solid #d1d5db",
+              background: view === v ? (v === "copilot" ? "#3b82f6" : "#1a1a2e") : "#fff",
+              color: view === v ? "#fff" : (v === "copilot" ? "#3b82f6" : "#374151"),
               cursor: "pointer", fontSize: 12,
               fontWeight: view === v ? 600 : 400,
             }}
           >
-            {v === "events" ? "Events" : "Risk"}
+            {v === "events" ? "Events" : v === "risk" ? "Risk" : "🤖 Copilot"}
           </button>
         ))}
 
@@ -256,8 +257,10 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
       </div>
 
       {/* Main content */}
-      <div style={{ padding: "16px 24px", maxWidth: 900, margin: "0 auto" }}>
-        {view === "risk" ? (
+      <div style={{ padding: "16px 24px", maxWidth: view === "copilot" ? 820 : 900, margin: "0 auto" }}>
+        {view === "copilot" ? (
+          <CopilotPanel userRole={user.role} />
+        ) : view === "risk" ? (
           <RiskPanel />
         ) : visible.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#9ca3af", fontSize: 15 }}>

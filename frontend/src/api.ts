@@ -281,6 +281,34 @@ export async function fetchOshaCodes(): Promise<OshaCode[]> {
   return res.json();
 }
 
+// ── AI Safety Copilot ─────────────────────────────────────────────────────────
+
+export interface CopilotMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface CopilotResponse {
+  answer: string;
+  suggested_questions: string[];
+}
+
+export async function askCopilot(
+  message: string,
+  history: CopilotMessage[],
+  role: string,
+): Promise<CopilotResponse> {
+  const res = await apiFetch("/copilot/ask", {
+    method: "POST",
+    body: JSON.stringify({ message, history, role }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Copilot request failed" }));
+    throw new Error(err.detail ?? "Copilot request failed");
+  }
+  return res.json();
+}
+
 /** Fetch a representative JPEG frame from a video file and return a blob: URL. */
 export async function fetchVideoSnapshot(videoPath: string): Promise<string> {
   const token = getToken();
