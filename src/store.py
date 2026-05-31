@@ -40,6 +40,7 @@ _MIGRATIONS: list[tuple[str, str]] = [
     ("osha_codes",   "ALTER TABLE events ADD COLUMN osha_codes TEXT NOT NULL DEFAULT '[]'"),
     ("fine_min_usd", "ALTER TABLE events ADD COLUMN fine_min_usd INTEGER NOT NULL DEFAULT 0"),
     ("fine_max_usd", "ALTER TABLE events ADD COLUMN fine_max_usd INTEGER NOT NULL DEFAULT 0"),
+    ("confidence",   "ALTER TABLE events ADD COLUMN confidence REAL NOT NULL DEFAULT 0.0"),
 ]
 
 
@@ -77,8 +78,8 @@ class EventStore:
             INSERT INTO events
                 (event_id, event_type, track_id, zone_id, missing_ppe,
                  severity, start_frame, end_frame, snapshot_path, created_at,
-                 zone_rule, osha_codes, fine_min_usd, fine_max_usd)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 zone_rule, osha_codes, fine_min_usd, fine_max_usd, confidence)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(event_id) DO UPDATE SET
                 end_frame     = excluded.end_frame,
                 snapshot_path = excluded.snapshot_path
@@ -98,6 +99,7 @@ class EventStore:
                 json.dumps(event.osha_codes),
                 event.fine_min_usd,
                 event.fine_max_usd,
+                event.confidence,
             ),
         )
         self._conn.commit()

@@ -52,6 +52,7 @@ class Violation:
     zone_id: str | None = None
     zone_rule: str | None = None       # "no_entry" | "require_ppe" | None
     missing_ppe: list[str] = field(default_factory=list)
+    confidence: float = 0.0            # detection confidence of the tracked person
 
 
 # ── "No-PPE" indicator classes emitted by the fine-tuned model ───────────────
@@ -142,6 +143,7 @@ class RulesEngine:
                     bbox=person.bbox,
                     severity="WARNING",
                     missing_ppe=missing,
+                    confidence=person.confidence,
                 ))
 
             # Zone checks
@@ -157,6 +159,7 @@ class RulesEngine:
                         severity="CRITICAL",
                         zone_id=zone.id,
                         zone_rule="no_entry",
+                        confidence=person.confidence,
                     ))
                 elif zone.rule == "require_ppe":
                     zone_missing = _missing_ppe(zone.required_ppe)
@@ -170,6 +173,7 @@ class RulesEngine:
                             zone_id=zone.id,
                             zone_rule="require_ppe",
                             missing_ppe=zone_missing,
+                            confidence=person.confidence,
                         ))
 
         if violations:

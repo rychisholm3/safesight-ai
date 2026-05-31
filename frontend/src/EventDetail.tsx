@@ -333,6 +333,30 @@ export function EventDetail({ event, onClose }: Props) {
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#1f2937", marginTop: 3 }}>{value}</div>
               </div>
             ))}
+
+            {/* Confidence tile — colour-coded green/amber/red */}
+            {event.confidence > 0 && (() => {
+              const pct   = Math.round(event.confidence * 100);
+              const color = pct >= 70 ? "#059669" : pct >= 45 ? "#d97706" : "#dc2626";
+              const label = pct >= 70 ? "High" : pct >= 45 ? "Medium" : "Low";
+              return (
+                <div style={{ background: "#fff", borderRadius: 7, padding: "10px 14px", border: `1px solid ${color}55` }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    Detection confidence
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
+                    {/* Mini progress bar */}
+                    <div style={{ flex: 1, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 3, transition: "width .4s" }} />
+                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 700, color, minWidth: 36, textAlign: "right" }}>
+                      {pct}%
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color, fontWeight: 600, marginTop: 2 }}>{label} confidence</div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* How similar sites resolved this */}

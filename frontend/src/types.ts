@@ -13,6 +13,7 @@ export interface SafeEvent {
   osha_codes: string[];
   fine_min_usd: number;
   fine_max_usd: number;
+  confidence: number;
 }
 
 export interface Zone {

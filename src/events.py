@@ -26,6 +26,7 @@ class Event:
     osha_codes: list[str] = field(default_factory=list)   # e.g. ["29 CFR 1926.100(a)"]
     fine_min_usd: int = 0
     fine_max_usd: int = 0
+    confidence: float = 0.0         # detection confidence of the tracked person (0–1)
 
 
 @dataclass
@@ -90,6 +91,7 @@ class EventDebouncer:
                     snapshot_path=None,
                     severity=violation.severity,
                     zone_rule=violation.zone_rule,
+                    confidence=violation.confidence,
                 )
                 state.active_event = event
                 state.pending_frames = 0
