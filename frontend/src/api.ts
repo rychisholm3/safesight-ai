@@ -1,5 +1,19 @@
 import type { SafeEvent, Stats, ZonesConfig } from "./types";
 
+// ── OSHA Rule Engine ──────────────────────────────────────────────────────────
+
+export interface OshaCode {
+  code: string;
+  title: string;
+  description: string;
+  fine_min_usd: number;
+  fine_max_usd: number;
+  willful_max_usd: number;
+  corrective_actions: string[];
+  plain_english: string;
+  reference_url: string;
+}
+
 const BASE = import.meta.env.VITE_API_URL ?? "";
 export const WS_URL = BASE
   ? BASE.replace(/^http/, "ws") + "/ws/events"
@@ -248,6 +262,24 @@ export interface VideoFileInfo {
 export async function fetchVideoFiles(): Promise<VideoFileInfo[]> {
   const res = await apiFetch("/cameras/video-files");
   if (!res.ok) throw new Error("Failed to list video files");
+  return res.json();
+}
+
+export async function fetchOshaLookup(event: SafeEvent): Promise<OshaCode[]> {
+  const qs = new URLSearchParams({ event_type: event.event_type });
+  if (event.missing_ppe?.length) qs.set("missing_ppe", event.missing_ppe.join(","));
+  if (event.zone_id) {
+    // We don't store zone_rule on the event, so use a sensible default
+    qs.set("zone_rule", event.event_type === "zone_intrusion" ? "no_entry" : "require_ppe");
+  }
+  const res = await apiFetch(`/osha/lookup?${qs}`);
+  if (!res.ok) throw new Error("Failed to fetch OSHA codes");
+  return res.json();
+}
+
+export async function fetchOshaCodes(): Promise<OshaCode[]> {
+  const res = await apiFetch("/osha/codes");
+  if (!res.ok) throw new Error("Failed to fetch OSHA codes");
   return res.json();
 }
 

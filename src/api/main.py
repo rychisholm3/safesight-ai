@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.api.cameras import router as cameras_router
+from src.osha.router import router as osha_router
 from src.api.ws import broadcaster, websocket_endpoint
 from src.auth.db import AuthDB
 from src.auth.dependencies import require_auth
@@ -102,6 +103,7 @@ app.include_router(auth_router)
 app.include_router(notifications_router)
 app.include_router(risk_router)
 app.include_router(cameras_router)
+app.include_router(osha_router)
 app.dependency_overrides[_get_notification_db] = _get_notification_db_impl
 app.dependency_overrides[_get_risk_engine]     = _get_risk_engine_impl
 
