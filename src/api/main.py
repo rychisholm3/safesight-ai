@@ -7,6 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
+from dotenv import load_dotenv
+load_dotenv()  # loads .env from the project root before anything else reads os.environ
+
 from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
