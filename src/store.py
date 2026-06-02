@@ -41,7 +41,8 @@ _MIGRATIONS: list[tuple[str, str]] = [
     ("fine_min_usd", "ALTER TABLE events ADD COLUMN fine_min_usd INTEGER NOT NULL DEFAULT 0"),
     ("fine_max_usd", "ALTER TABLE events ADD COLUMN fine_max_usd INTEGER NOT NULL DEFAULT 0"),
     ("confidence",   "ALTER TABLE events ADD COLUMN confidence REAL NOT NULL DEFAULT 0.0"),
-    ("bbox",         "ALTER TABLE events ADD COLUMN bbox TEXT"),
+    ("bbox",               "ALTER TABLE events ADD COLUMN bbox TEXT"),
+    ("person_detections",  "ALTER TABLE events ADD COLUMN person_detections TEXT"),
 ]
 
 
@@ -74,14 +75,16 @@ class EventStore:
             event.snapshot_path = snap_path
             logger.debug("Snapshot written: %s", snap_path)
 
-        bbox_json = json.dumps(list(event.bbox)) if event.bbox is not None else None
+        bbox_json  = json.dumps(list(event.bbox)) if event.bbox is not None else None
+        dets_json  = json.dumps(event.person_detections) if event.person_detections else None
         self._conn.execute(
             """
             INSERT INTO events
                 (event_id, event_type, track_id, zone_id, missing_ppe,
                  severity, start_frame, end_frame, snapshot_path, created_at,
-                 zone_rule, osha_codes, fine_min_usd, fine_max_usd, confidence, bbox)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 zone_rule, osha_codes, fine_min_usd, fine_max_usd, confidence,
+                 bbox, person_detections)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(event_id) DO UPDATE SET
                 end_frame     = excluded.end_frame,
                 snapshot_path = excluded.snapshot_path
@@ -103,6 +106,7 @@ class EventStore:
                 event.fine_max_usd,
                 event.confidence,
                 bbox_json,
+                dets_json,
             ),
         )
         self._conn.commit()
@@ -150,7 +154,8 @@ class EventStore:
                 **dict(row),
                 "missing_ppe": json.loads(row["missing_ppe"]),
                 "osha_codes":  json.loads(row["osha_codes"]) if row["osha_codes"] else [],
-                "bbox":        json.loads(row["bbox"]) if row["bbox"] else None,
+                "bbox":               json.loads(row["bbox"]) if row["bbox"] else None,
+                "person_detections":  json.loads(row["person_detections"]) if row["person_detections"] else [],
             }
             for row in rows
         ]

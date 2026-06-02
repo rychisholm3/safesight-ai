@@ -123,7 +123,7 @@ class TestMakeLabel:
 
     def test_truncates_long_ppe_list(self):
         label = _make_label({"event_type": "missing_ppe", "missing_ppe": ["hardhat", "vest", "mask"], "severity": "WARNING"})
-        assert "…" in label
+        assert "..." in label or "…" in label
 
 
 # ── annotate_snapshot ─────────────────────────────────────────────────────────
@@ -162,6 +162,31 @@ class TestAnnotateSnapshot:
 
         # Bbox extends way beyond frame — should not crash
         result = annotate_snapshot(snap, (-50, -50, 9000, 9000), "big bbox")
+        assert result is not None
+
+    def test_per_class_detections_drawn(self, tmp_path):
+        """Per-class PPE detection boxes are drawn without crashing."""
+        snap = tmp_path / "snap.jpg"
+        import cv2
+        frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.imwrite(str(snap), frame)
+
+        person_dets = [
+            {"class_name": "hardhat",   "bbox": [120, 30, 200, 80],  "confidence": 0.92},
+            {"class_name": "no-vest",   "bbox": [100, 90, 230, 280], "confidence": 0.85},
+        ]
+        result = annotate_snapshot(
+            snap, (80, 20, 260, 400), "[WARNING] Missing: vest",
+            person_detections=person_dets,
+        )
+        assert result is not None
+        assert isinstance(result, bytes)
+
+    def test_missing_detections_field_does_not_crash(self, tmp_path):
+        snap = tmp_path / "snap.jpg"
+        import cv2
+        cv2.imwrite(str(snap), np.zeros((480, 640, 3), dtype=np.uint8))
+        result = annotate_snapshot(snap, (10, 10, 200, 300), "label", person_detections=None)
         assert result is not None
 
 

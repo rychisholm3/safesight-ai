@@ -119,10 +119,11 @@ def get_annotated_snapshot(
     bbox     = tuple(int(v) for v in bbox_raw) if bbox_raw else None
 
     jpeg = annotate_snapshot(
-        snapshot_path = snap_file,
-        bbox          = bbox,                   # type: ignore[arg-type]
-        label         = _make_label(event),
-        severity      = event.get("severity", "WARNING"),
+        snapshot_path      = snap_file,
+        bbox               = bbox,              # type: ignore[arg-type]
+        label              = _make_label(event),
+        severity           = event.get("severity", "WARNING"),
+        person_detections  = event.get("person_detections") or [],
     )
     if jpeg is None:
         raise HTTPException(status_code=404, detail="Snapshot file not found or unreadable")
@@ -153,10 +154,11 @@ def get_evidence_pdf(
         bbox_raw = event.get("bbox")
         bbox     = tuple(int(v) for v in bbox_raw) if bbox_raw else None
         annotated_jpeg = annotate_snapshot(
-            snapshot_path = snap_file,
-            bbox          = bbox,               # type: ignore[arg-type]
-            label         = _make_label(event),
-            severity      = event.get("severity", "WARNING"),
+            snapshot_path      = snap_file,
+            bbox               = bbox,          # type: ignore[arg-type]
+            label              = _make_label(event),
+            severity           = event.get("severity", "WARNING"),
+            person_detections  = event.get("person_detections") or [],
         )
 
     try:

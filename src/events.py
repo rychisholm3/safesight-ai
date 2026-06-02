@@ -28,6 +28,7 @@ class Event:
     fine_max_usd: int = 0
     confidence: float = 0.0         # detection confidence of the tracked person (0–1)
     bbox: tuple[int, int, int, int] | None = None  # (x1,y1,x2,y2) person bbox in frame
+    person_detections: list[dict] = field(default_factory=list)  # serialised per-class detections
 
 
 @dataclass
@@ -94,6 +95,14 @@ class EventDebouncer:
                     zone_rule=violation.zone_rule,
                     confidence=violation.confidence,
                     bbox=violation.bbox,
+                    person_detections=[
+                        {
+                            "class_name": d.class_name,
+                            "bbox":       list(d.bbox),
+                            "confidence": float(d.confidence),
+                        }
+                        for d in violation.person_detections
+                    ],
                 )
                 state.active_event = event
                 state.pending_frames = 0
