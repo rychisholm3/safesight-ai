@@ -4,8 +4,13 @@
  */
 import { useEffect, useState } from "react";
 import type { SafeEvent } from "./types";
-import { fetchOshaLookup } from "./api";
-import type { OshaCode } from "./api";
+import {
+  fetchOshaLookup,
+  fetchExplanation,
+  fetchAnnotatedSnapshot,
+  downloadEvidencePdf,
+} from "./api";
+import type { OshaCode, ExplanationItem } from "./api";
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -242,16 +247,39 @@ interface Props {
 }
 
 export function EventDetail({ event, onClose }: Props) {
-  const [codes, setCodes]     = useState<OshaCode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [codes, setCodes]               = useState<OshaCode[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [explanation, setExplanation]   = useState<ExplanationItem[]>([]);
+  const [annotatedUrl, setAnnotatedUrl] = useState<string | null>(null);
+  const [showAnnotated, setShowAnnotated] = useState(false);
+  const [loadingAnnotated, setLoadingAnnotated] = useState(false);
+  const [pdfLoading, setPdfLoading]     = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    fetchOshaLookup(event)
-      .then(setCodes)
-      .catch(() => setCodes([]))
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetchOshaLookup(event).catch(() => []),
+      fetchExplanation(event.event_id).catch(() => []),
+    ]).then(([c, e]) => {
+      setCodes(c as OshaCode[]);
+      setExplanation(e as ExplanationItem[]);
+    }).finally(() => setLoading(false));
   }, [event.event_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleToggleAnnotated() {
+    if (annotatedUrl) { setShowAnnotated(v => !v); return; }
+    setLoadingAnnotated(true);
+    fetchAnnotatedSnapshot(event.event_id)
+      .then(url => { setAnnotatedUrl(url); setShowAnnotated(true); })
+      .catch(() => {})
+      .finally(() => setLoadingAnnotated(false));
+  }
+
+  function handleExportPdf() {
+    setPdfLoading(true);
+    downloadEvidencePdf(event.event_id);
+    setTimeout(() => setPdfLoading(false), 3000);
+  }
 
   const ctx        = getResolutionContext(event);
   const isOpen     = event.end_frame === null;
@@ -298,6 +326,18 @@ export function EventDetail({ event, onClose }: Props) {
             <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 5, background: isOpen ? "#22c55e" : "#64748b", color: "#fff", letterSpacing: 0.5 }}>
               {isOpen ? "ACTIVE" : "CLOSED"}
             </span>
+            <button
+              onClick={handleExportPdf}
+              disabled={pdfLoading}
+              style={{
+                fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 5,
+                background: pdfLoading ? "#374151" : "#3b82f6", color: "#fff",
+                border: "none", cursor: pdfLoading ? "default" : "pointer",
+                letterSpacing: 0.4,
+              }}
+            >
+              {pdfLoading ? "Generating…" : "⬇ Export PDF"}
+            </button>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#9ca3af", fontSize: 24, cursor: "pointer", lineHeight: 1, marginLeft: 4 }}>×</button>
         </div>
@@ -305,13 +345,35 @@ export function EventDetail({ event, onClose }: Props) {
         {/* ── Body ── */}
         <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* Snapshot */}
+          {/* Snapshot — with annotated toggle */}
           {snapshotFile && (
             <div style={{ borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "6px 10px", background: "#f1f5f9", borderBottom: "1px solid #e5e7eb",
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
+                  {showAnnotated ? "Annotated snapshot" : "Original snapshot"}
+                </span>
+                <button
+                  onClick={handleToggleAnnotated}
+                  disabled={loadingAnnotated}
+                  style={{
+                    fontSize: 11, padding: "3px 10px", borderRadius: 6,
+                    border: "1px solid #cbd5e1",
+                    background: showAnnotated ? "#1a1a2e" : "#fff",
+                    color: showAnnotated ? "#fff" : "#374151",
+                    cursor: loadingAnnotated ? "default" : "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  {loadingAnnotated ? "Loading…" : showAnnotated ? "Show original" : "Show annotated"}
+                </button>
+              </div>
               <img
-                src={`${BASE}/snapshots/${snapshotFile}`}
-                alt="Violation snapshot"
-                style={{ width: "100%", display: "block", maxHeight: 260, objectFit: "cover" }}
+                src={showAnnotated && annotatedUrl ? annotatedUrl : `${BASE}/snapshots/${snapshotFile}`}
+                alt={showAnnotated ? "Annotated violation snapshot" : "Violation snapshot"}
+                style={{ width: "100%", display: "block", maxHeight: 280, objectFit: "contain", background: "#000" }}
                 onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
               />
             </div>
@@ -358,6 +420,45 @@ export function EventDetail({ event, onClose }: Props) {
               );
             })()}
           </div>
+
+          {/* Reason breakdown */}
+          {explanation.length > 0 && (
+            <div style={{ borderRadius: 8, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+              <div style={{
+                padding: "9px 16px", background: "#f8fafc",
+                borderBottom: "1px solid #e5e7eb",
+                display: "flex", alignItems: "center", gap: 8,
+              }}>
+                <span style={{ fontSize: 16 }}>🔍</span>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Reason Breakdown
+                </div>
+              </div>
+              <div style={{ padding: "4px 0" }}>
+                {explanation.map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "grid", gridTemplateColumns: "160px 1fr",
+                      padding: "9px 16px", gap: 12,
+                      borderBottom: i < explanation.length - 1 ? "1px solid #f1f5f9" : "none",
+                      background: i % 2 === 0 ? "#fff" : "#fafafa",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                      <span style={{ fontSize: 14 }}>{item.icon}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.5, lineHeight: 1.4, marginTop: 1 }}>
+                        {item.category}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.6 }}>
+                      {item.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* How similar sites resolved this */}
           <InfoBox icon="🏗️" title="How similar sites resolved this" accentColor="#059669">

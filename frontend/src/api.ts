@@ -281,6 +281,51 @@ export async function fetchOshaCodes(): Promise<OshaCode[]> {
   return res.json();
 }
 
+// ── Evidence & Explainability ─────────────────────────────────────────────────
+
+export interface ExplanationItem {
+  category: string;
+  text: string;
+  icon: string;
+}
+
+export async function fetchExplanation(eventId: string): Promise<ExplanationItem[]> {
+  const res = await apiFetch(`/evidence/${eventId}/explanation`);
+  if (!res.ok) throw new Error("Failed to fetch explanation");
+  return res.json();
+}
+
+/** Returns a URL to the annotated snapshot (requires auth header — use blob URL). */
+export async function fetchAnnotatedSnapshot(eventId: string): Promise<string> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/evidence/${eventId}/annotated-snapshot`, { headers });
+  if (!res.ok) throw new Error("Annotated snapshot not available");
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+/** Triggers a PDF download by opening the endpoint in a new tab. */
+export function downloadEvidencePdf(eventId: string): void {
+  const token = getToken();
+  // Open in iframe trick — pass token as query param won't work, use anchor with fetch
+  const url = `${BASE}/evidence/${eventId}/report.pdf`;
+  // Fetch it manually so we can attach auth header, then trigger download
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  fetch(url, { headers })
+    .then((r) => r.blob())
+    .then((blob) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `safesight-evidence-${eventId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    })
+    .catch(() => alert("PDF generation failed — check the backend logs."));
+}
+
 // ── AI Safety Copilot ─────────────────────────────────────────────────────────
 
 export interface CopilotMessage {

@@ -27,6 +27,7 @@ class Event:
     fine_min_usd: int = 0
     fine_max_usd: int = 0
     confidence: float = 0.0         # detection confidence of the tracked person (0–1)
+    bbox: tuple[int, int, int, int] | None = None  # (x1,y1,x2,y2) person bbox in frame
 
 
 @dataclass
@@ -92,6 +93,7 @@ class EventDebouncer:
                     severity=violation.severity,
                     zone_rule=violation.zone_rule,
                     confidence=violation.confidence,
+                    bbox=violation.bbox,
                 )
                 state.active_event = event
                 state.pending_frames = 0
