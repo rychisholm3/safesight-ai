@@ -192,6 +192,100 @@ class TestAnnotateSnapshot:
 
 # ── PDF generation (smoke test) ───────────────────────────────────────────────
 
+class TestNearMissExplanation:
+    def _near_miss_event(self, zone_rule="proximity", **kw) -> dict:
+        base = {
+            "event_id":    "nm001",
+            "event_type":  "near_miss",
+            "track_id":    3,
+            "zone_id":     None,
+            "zone_rule":   zone_rule,
+            "missing_ppe": [],
+            "osha_codes":  ["OSH Act Section 5(a)(1)"],
+            "fine_min_usd": 0,
+            "fine_max_usd": 0,
+            "confidence":  0.82,
+            "severity":    "CRITICAL",
+            "start_frame": 10,
+            "end_frame":   50,
+        }
+        return {**base, **kw}
+
+    def test_returns_items(self):
+        from src.evidence.explanation import build_explanation
+        items = build_explanation(self._near_miss_event())
+        assert len(items) > 0
+
+    def test_first_item_is_near_miss(self):
+        from src.evidence.explanation import build_explanation
+        items = build_explanation(self._near_miss_event("proximity"))
+        assert "Near-miss" in items[0].category or "near" in items[0].category.lower()
+
+    def test_proximity_text_mentions_vehicle(self):
+        from src.evidence.explanation import build_explanation
+        items = build_explanation(self._near_miss_event("proximity"))
+        full_text = " ".join(i.text for i in items)
+        assert "vehicle" in full_text.lower() or "struck" in full_text.lower()
+
+    def test_trajectory_text_mentions_paths(self):
+        from src.evidence.explanation import build_explanation
+        items = build_explanation(self._near_miss_event("trajectory"))
+        full_text = " ".join(i.text for i in items)
+        assert "path" in full_text.lower() or "converge" in full_text.lower()
+
+    def test_zone_entry_text_mentions_zone(self):
+        from src.evidence.explanation import build_explanation
+        items = build_explanation(self._near_miss_event("zone_entry", zone_id="forklift_lane"))
+        zone_item = next(i for i in items if i.category == "Location")
+        assert "forklift_lane" in zone_item.text
+
+    def test_fine_item_explains_no_fine(self):
+        from src.evidence.explanation import build_explanation
+        items = build_explanation(self._near_miss_event())
+        fine_item = next(i for i in items if i.category == "Fine exposure")
+        assert "no osha fine" in fine_item.text.lower() or "near-miss" in fine_item.text.lower()
+
+    def test_closed_near_miss_mentions_safe_exit(self):
+        from src.evidence.explanation import build_explanation
+        items = build_explanation(self._near_miss_event(end_frame=60))
+        dur_item = next(i for i in items if i.category == "Duration")
+        assert "safely" in dur_item.text.lower() or "closed" in dur_item.text.lower()
+
+    def test_active_near_miss_duration(self):
+        from src.evidence.explanation import build_explanation
+        items = build_explanation(self._near_miss_event(end_frame=None))
+        dur_item = next(i for i in items if i.category == "Duration")
+        assert "ACTIVE" in dur_item.text
+
+
+class TestNearMissOshaLookup:
+    def test_proximity_returns_gdc_and_vehicle_code(self):
+        from src.osha.matcher import match_violation
+        codes = match_violation("near_miss", zone_rule="proximity")
+        code_strs = [c.code for c in codes]
+        assert any("5(a)(1)" in c for c in code_strs)
+        assert any("1926.602" in c for c in code_strs)
+
+    def test_trajectory_returns_gdc(self):
+        from src.osha.matcher import match_violation
+        codes = match_violation("near_miss", zone_rule="trajectory")
+        assert len(codes) >= 1
+        assert any("5(a)(1)" in c.code for c in codes)
+
+    def test_zone_entry_returns_gdc_and_signage(self):
+        from src.osha.matcher import match_violation
+        codes = match_violation("near_miss", zone_rule="zone_entry")
+        code_strs = [c.code for c in codes]
+        assert any("5(a)(1)" in c for c in code_strs)
+        assert any("1926.200" in c for c in code_strs)
+
+    def test_no_zone_rule_returns_gdc(self):
+        from src.osha.matcher import match_violation
+        codes = match_violation("near_miss")
+        assert len(codes) >= 1
+        assert any("5(a)(1)" in c.code for c in codes)
+
+
 class TestPdfGeneration:
     def _event(self):
         return {

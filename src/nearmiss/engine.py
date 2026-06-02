@@ -128,6 +128,10 @@ class NearMissEngine:
                     closest_dist = dist
                     closest_vehicle = veh
 
+            # "without contact" — bbox distance of 0 means they are actually
+            # overlapping/touching, which is a collision, not a near-miss.
+            if closest_dist == 0:
+                continue
             if closest_dist < self._cfg.vehicle_critical_px:
                 sev = "CRITICAL"
             elif closest_dist < self._cfg.vehicle_warning_px:

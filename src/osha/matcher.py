@@ -34,6 +34,18 @@ _ZONE_CODE_KEYS: dict[str, list[str]] = {
 }
 
 
+# ── Near-miss sub-type → OSHA code(s) ───────────────────────────────────────
+# Near-miss events don't carry fine liability (no injury occurred) but they
+# still trigger employer obligations under the General Duty Clause and, for
+# vehicle proximity, the motor-vehicle safety standard.
+_NEAR_MISS_CODE_KEYS: dict[str, list[str]] = {
+    "proximity":   ["5(a)(1)", "1926.602(a)"],   # GDC + motor vehicle safety
+    "trajectory":  ["5(a)(1)"],                   # GDC only
+    "zone_entry":  ["5(a)(1)", "1926.200(a)"],    # GDC + signage requirement
+    "_default":    ["5(a)(1)"],
+}
+
+
 def match_violation(
     event_type: str,
     missing_ppe: list[str] | None = None,
@@ -42,11 +54,11 @@ def match_violation(
     """Return the OSHA codes triggered by a violation.
 
     Args:
-        event_type:   "missing_ppe" or "zone_intrusion"
+        event_type:   "missing_ppe", "zone_intrusion", or "near_miss"
         missing_ppe:  List of PPE items absent (e.g. ["hardhat", "vest"]).
                       Only used when event_type == "missing_ppe".
-        zone_rule:    The zone rule that was violated ("no_entry", "require_ppe").
-                      Only used when event_type == "zone_intrusion".
+        zone_rule:    The zone rule / near-miss sub-type that was triggered.
+                      Used for "zone_intrusion" and "near_miss".
 
     Returns:
         Deduplicated list of OshaCode objects, in priority order.
@@ -73,6 +85,11 @@ def match_violation(
     elif event_type == "zone_intrusion":
         rule = zone_rule or "_default"
         for k in _ZONE_CODE_KEYS.get(rule, _ZONE_CODE_KEYS["_default"]):
+            _add(k)
+
+    elif event_type == "near_miss":
+        sub_type = zone_rule or "_default"
+        for k in _NEAR_MISS_CODE_KEYS.get(sub_type, _NEAR_MISS_CODE_KEYS["_default"]):
             _add(k)
 
     else:

@@ -161,6 +161,38 @@ def _detection(class_name: str, bbox: tuple) -> Detection:
     return Detection(class_name=class_name, bbox=bbox, confidence=0.9, frame_id=0)
 
 
+class TestProximityRequiresNonZeroDistance:
+    """Fix: overlapping bboxes (dist=0) should not fire near-miss (that's a collision)."""
+
+    def test_overlapping_bboxes_not_a_near_miss(self):
+        engine = NearMissEngine()
+        # Person and vehicle bboxes overlap completely — distance = 0
+        persons = [_person(1, (100, 100, 300, 400))]
+        detections = [_detection("truck", (100, 100, 300, 400))]  # same bbox
+        viols = engine.check(persons, detections, frame_id=1)
+        prox = [v for v in viols if v.zone_rule == "proximity"]
+        assert len(prox) == 0
+
+    def test_touching_bboxes_not_a_near_miss(self):
+        engine = NearMissEngine()
+        # Person ends at x=200, truck starts at x=200 — touching (dist=0)
+        persons = [_person(1, (100, 100, 200, 300))]
+        detections = [_detection("truck", (200, 100, 350, 300))]
+        viols = engine.check(persons, detections, frame_id=1)
+        prox = [v for v in viols if v.zone_rule == "proximity"]
+        assert len(prox) == 0
+
+    def test_one_pixel_gap_is_a_near_miss(self):
+        engine = NearMissEngine()
+        # 1 px gap — should fire CRITICAL (< 50 px threshold)
+        persons = [_person(1, (100, 100, 200, 300))]
+        detections = [_detection("truck", (201, 100, 350, 300))]
+        viols = engine.check(persons, detections, frame_id=1)
+        prox = [v for v in viols if v.zone_rule == "proximity"]
+        assert len(prox) == 1
+        assert prox[0].severity == "CRITICAL"
+
+
 class TestNearMissEngineProximity:
     def test_no_vehicles_no_violations(self):
         engine = NearMissEngine()
