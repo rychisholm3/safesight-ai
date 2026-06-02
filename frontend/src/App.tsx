@@ -44,7 +44,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
     () => !localStorage.getItem("safesight_setup_done")
   );
   const [stats, setStats] = useState<Stats | null>(null);
-  const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion">("all");
+  const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion" | "near_miss">("all");
   const [severityFilter, setSeverityFilter] = useState<"all" | "WARNING" | "CRITICAL">("all");
   const [connected, setConnected] = useState(false);
   const [view, setView] = useState<"events" | "risk" | "copilot">("events");
@@ -175,6 +175,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
             <StatChip label="Active" value={stats.open} color="#f87171" />
             <StatChip label="Missing PPE" value={stats.by_type["missing_ppe"] ?? 0} color="#fbbf24" />
             <StatChip label="Zone" value={stats.by_type["zone_intrusion"] ?? 0} color="#f87171" />
+            <StatChip label="Near Miss" value={stats.by_type["near_miss"] ?? 0} color="#a855f7" />
           </div>
         )}
       </div>
@@ -191,7 +192,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
         }}
       >
         {/* View toggle */}
-        {(["events", "risk", "copilot"] as const).map((v) => (
+        {(["events", "risk", "copilot"] as const).map((v) => (   // eslint-disable-line
           <button
             key={v}
             onClick={() => setView(v)}
@@ -212,20 +213,20 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
           <>
             <span style={{ color: "#d1d5db", margin: "0 4px" }}>|</span>
             <span style={{ fontSize: 13, color: "#555", marginRight: 4 }}>Filter:</span>
-            {(["all", "missing_ppe", "zone_intrusion"] as const).map((f) => (
+            {(["all", "missing_ppe", "zone_intrusion", "near_miss"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
                 style={{
                   padding: "4px 12px", borderRadius: 20,
-                  border: "1px solid #d1d5db",
-                  background: filter === f ? "#1a1a2e" : "#fff",
-                  color: filter === f ? "#fff" : "#374151",
+                  border: f === "near_miss" ? "1px solid #a855f7" : "1px solid #d1d5db",
+                  background: filter === f ? (f === "near_miss" ? "#a855f7" : "#1a1a2e") : "#fff",
+                  color: filter === f ? "#fff" : (f === "near_miss" ? "#a855f7" : "#374151"),
                   cursor: "pointer", fontSize: 12,
                   fontWeight: filter === f ? 600 : 400,
                 }}
               >
-                {f === "all" ? "All" : f === "missing_ppe" ? "Missing PPE" : "Zone Intrusion"}
+                {f === "all" ? "All" : f === "missing_ppe" ? "Missing PPE" : f === "zone_intrusion" ? "Zone Intrusion" : "⚡ Near Miss"}
               </button>
             ))}
             <span style={{ color: "#d1d5db", margin: "0 4px" }}>|</span>

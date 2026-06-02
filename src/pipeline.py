@@ -36,6 +36,7 @@ from src.detector import Detection, Detector
 from src.events import EventDebouncer
 from src.osha.matcher import fine_range, match_violation
 from src.reader import FrameReader
+from src.nearmiss.engine import NearMissEngine
 from src.rules import RulesEngine, SceneConfig
 from src.sources import open_source
 from src.store import EventStore
@@ -98,7 +99,9 @@ def _annotate(
 
         if obj.track_id in violating_ids:
             v_labels = [
-                (f"NO {p.upper()}" if v.type == "missing_ppe" else f"ZONE: {v.zone_id}")
+                (f"NO {p.upper()}" if v.type == "missing_ppe"
+                 else f"NEAR MISS: {v.zone_rule or 'proximity'}" if v.type == "near_miss"
+                 else f"ZONE: {v.zone_id}")
                 for v in violations
                 if v.track_id == obj.track_id
             ]
@@ -179,8 +182,11 @@ def run(
 
     detector = Detector(model_path=model_path, confidence=confidence, imgsz=imgsz, sahi=sahi)
     tracker  = Tracker(frame_rate=fps)
-    rules    = RulesEngine(scene)
-    debouncer = EventDebouncer(fps=fps)
+    rules      = RulesEngine(scene)
+    near_miss  = NearMissEngine(scene=scene)
+    debouncer  = EventDebouncer(fps=fps)
+    # Separate debouncer for near-miss: fires faster (2 frames) and shorter cooldown
+    nm_debouncer = EventDebouncer(fps=fps, min_duration=2/fps, cooldown_duration=1.0)
     store    = EventStore(db_path=db_path, snapshot_dir=snapshot_dir)
     alerter  = WebhookAlerter(webhook_url) if webhook_url else None
 
@@ -239,9 +245,13 @@ def run(
                     head_dets, frame.shape[1], frame.shape[0], frame_id
                 )
 
-            tracked     = tracker.update(person_dets, frame_id)
-            violations  = rules.check(tracked, detections, frame_id)
-            opened, closed = debouncer.update(violations, frame_id)
+            tracked         = tracker.update(person_dets, frame_id)
+            violations      = rules.check(tracked, detections, frame_id)
+            nm_violations   = near_miss.check(tracked, detections, frame_id)
+            opened, closed  = debouncer.update(violations, frame_id)
+            nm_opened, nm_closed = nm_debouncer.update(nm_violations, frame_id)
+            opened  = opened  + nm_opened
+            closed  = closed  + nm_closed
 
             # ── Enrich opened events with OSHA codes ──────────────────────────
             for event in opened:
@@ -303,7 +313,7 @@ def run(
             frame_id += 1
 
     # ── Shutdown ──────────────────────────────────────────────────────────────
-    flushed = debouncer.flush(frame_id)
+    flushed = debouncer.flush(frame_id) + nm_debouncer.flush(frame_id)
     for event in flushed:
         store.close_event(event)
         broadcaster.publish(event, "closed")

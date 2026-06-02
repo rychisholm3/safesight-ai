@@ -1,6 +1,6 @@
 export interface SafeEvent {
   event_id: string;
-  event_type: "missing_ppe" | "zone_intrusion";
+  event_type: "missing_ppe" | "zone_intrusion" | "near_miss";
   track_id: number;
   zone_id: string | null;
   zone_rule: string | null;

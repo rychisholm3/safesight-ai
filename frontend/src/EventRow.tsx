@@ -7,10 +7,18 @@ function label(e: SafeEvent): string {
     const items = e.missing_ppe.length ? e.missing_ppe.join(", ") : "PPE";
     return `Missing ${items}`;
   }
+  if (e.event_type === "near_miss") {
+    const sub = e.zone_rule === "proximity"  ? "Vehicle proximity"
+              : e.zone_rule === "trajectory" ? "Collision trajectory"
+              : e.zone_rule === "zone_entry" ? `Zone entry — ${e.zone_id || "restricted area"}`
+              : "Near miss";
+    return `⚠ Near Miss — ${sub}`;
+  }
   return `Zone intrusion${e.zone_id ? ` — ${e.zone_id}` : ""}`;
 }
 
 function oshaHint(e: SafeEvent): string {
+  if (e.event_type === "near_miss") return "29 CFR 5(a)(1) General Duty";
   if (e.event_type === "missing_ppe") {
     const first = e.missing_ppe[0];
     if (first === "hardhat") return "29 CFR 1926.100(a)";
@@ -32,8 +40,9 @@ interface Props {
 
 export function EventRow({ event }: Props) {
   const [showDetail, setShowDetail] = useState(false);
-  const isOpen = event.end_frame === null;
-  const isPpe  = event.event_type === "missing_ppe";
+  const isOpen    = event.end_frame === null;
+  const isPpe     = event.event_type === "missing_ppe";
+  const isNearMiss = event.event_type === "near_miss";
 
   return (
     <>
@@ -46,8 +55,8 @@ export function EventRow({ event }: Props) {
           gap: 12,
           padding: "10px 14px",
           borderRadius: 6,
-          background: isOpen ? (isPpe ? "#fff3cd" : "#f8d7da") : "#f0f0f0",
-          borderLeft: `4px solid ${isOpen ? (isPpe ? "#f0a500" : "#dc3545") : "#aaa"}`,
+          background: isOpen ? (isNearMiss ? "#fdf4ff" : isPpe ? "#fff3cd" : "#f8d7da") : "#f0f0f0",
+          borderLeft: `4px solid ${isOpen ? (isNearMiss ? "#a855f7" : isPpe ? "#f0a500" : "#dc3545") : "#aaa"}`,
           opacity: isOpen ? 1 : 0.7,
           cursor: "pointer",
           transition: "box-shadow .15s",
@@ -55,7 +64,7 @@ export function EventRow({ event }: Props) {
         onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,.12)")}
         onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}
       >
-        <span style={{ fontSize: 18 }}>{isPpe ? "🦺" : "⛔"}</span>
+        <span style={{ fontSize: 18 }}>{isNearMiss ? "⚡" : isPpe ? "🦺" : "⛔"}</span>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 14 }}>{label(event)}</div>
