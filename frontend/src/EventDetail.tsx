@@ -24,8 +24,63 @@ interface ResolutionContext {
 }
 
 function getResolutionContext(event: SafeEvent): ResolutionContext {
-  const isPpe = event.event_type === "missing_ppe";
-  const firstPpe = event.missing_ppe[0] ?? "";
+  const isPpe      = event.event_type === "missing_ppe";
+  const isNearMiss = event.event_type === "near_miss";
+  const firstPpe   = event.missing_ppe[0] ?? "";
+
+  // ── Near-miss ──────────────────────────────────────────────────────────────
+  if (isNearMiss) {
+    const sub = event.zone_rule;
+    if (sub === "proximity") {
+      return {
+        howResolved:
+          "Sites that eliminated vehicle-pedestrian near-misses did three things together: they physically separated pedestrian routes from vehicle travel lanes using jersey barriers or solid fencing (not just cones), equipped all vehicles with proximity warning systems that alert both the driver and the worker, and designated spotters during any reversing or manoeuvring near foot-traffic areas. Sites that relied on awareness training alone without physical separation saw near-miss rates return to baseline within a month.",
+        typicalTimeToResolve:
+          "Physical separation barriers can be installed within hours. A site-wide traffic management plan review typically takes 1–3 days. Sustained near-miss elimination takes 2–4 weeks of enforced separation combined with spotter deployment.",
+        supervisorAction:
+          event.severity === "CRITICAL"
+            ? "IMMEDIATE: Halt vehicle movement in the affected area until the worker is clear. Debrief both the vehicle operator and the worker. Install a temporary exclusion barrier between the vehicle route and the pedestrian area before resuming operations."
+            : "Before the next vehicle movement: identify the overlap between vehicle and pedestrian routes. Deploy a spotter for all vehicle movements in the vicinity. Review the site traffic management plan today.",
+        escalationTrigger:
+          "Escalate to Project Manager and Safety Officer if the same vehicle route and pedestrian path overlap again within 48 hours. Three or more proximity near-misses on the same route within 7 days requires a formal traffic management plan revision and sign-off from the site safety officer before operations resume.",
+      };
+    }
+    if (sub === "trajectory") {
+      return {
+        howResolved:
+          "Converging-path near-misses are most often resolved by introducing designated crossing points — locations where pedestrians are expected to cross vehicle lanes, marked clearly and equipped with stop-and-look signage. Sites that painted bold pedestrian crossing markings and briefed workers on 'stop, look, proceed' at every crossing point saw trajectory conflicts drop significantly. Some sites installed convex mirrors at blind corners to give workers and vehicle operators advance visibility.",
+        typicalTimeToResolve:
+          "Crossing point markings can be in place within a day. Behavioural change from 'stop, look, proceed' briefings typically takes 1–2 weeks of reinforcement.",
+        supervisorAction:
+          "Today: identify the crossing points on site where worker paths intersect with vehicle routes. Paint or mark these clearly and brief all workers and operators before the next shift. Install a convex mirror if any crossing involves a blind corner.",
+        escalationTrigger:
+          "Escalate if the same two people or same route generates repeated trajectory alerts within 48 hours. This indicates a structural site layout problem requiring a formal re-route of either the vehicle lane or the pedestrian path.",
+      };
+    }
+    if (sub === "zone_entry") {
+      return {
+        howResolved:
+          "Brief zone entries — where workers step inside a restricted boundary and immediately back out — are usually caused by unclear or poorly marked boundaries. Sites that eliminated this behaviour replaced tape-and-cone demarcation with solid physical barriers (jersey barriers, solid fencing, or interlocked scaffold boards) so workers cannot accidentally cross the boundary. High-visibility floor markings ('DO NOT ENTER') at the exact boundary line also reduced accidental crossings by over 60% on sites that implemented them.",
+        typicalTimeToResolve:
+          "Improved boundary marking can be in place within hours. Physical barrier installation typically takes a day. Eliminating accidental entries usually takes 1–2 weeks once the boundary is unambiguous.",
+        supervisorAction:
+          "Before the next shift: walk the zone boundary and identify any points where the demarcation is unclear or easy to accidentally cross. Install a physical barrier at those points. Brief the crew on the exact boundary at the pre-shift meeting.",
+        escalationTrigger:
+          "Escalate if the same worker crosses the boundary again within 24 hours — this suggests intentional entry rather than accidental crossing and should be treated as a full zone-intrusion violation with a formal written warning.",
+      };
+    }
+    // Fallback for unknown near-miss sub-type
+    return {
+      howResolved:
+        "Near-miss events indicate an imminent hazard that did not result in injury on this occasion. The most effective response is to treat every near-miss as a leading indicator of a future injury and investigate the root cause immediately.",
+      typicalTimeToResolve:
+        "Root cause identification should happen within 24 hours. Corrective measures should be in place before the next shift.",
+      supervisorAction:
+        "Document this near-miss in the site safety log. Brief the crew on what happened and what changes are being made. Do not wait for an injury to act.",
+      escalationTrigger:
+        "Escalate to the Safety Officer if the same near-miss type occurs twice within 7 days. Notify your insurance carrier — near-miss documentation is required by many construction insurance policies.",
+    };
+  }
 
   if (!isPpe) {
     // Zone intrusion
@@ -141,6 +196,13 @@ function eventLabel(e: SafeEvent): string {
   if (e.event_type === "missing_ppe") {
     const items = e.missing_ppe.length ? e.missing_ppe.map(p => p.toUpperCase()).join(" + ") : "PPE";
     return `Missing ${items}`;
+  }
+  if (e.event_type === "near_miss") {
+    const sub = e.zone_rule === "proximity"  ? "Vehicle Proximity"
+              : e.zone_rule === "trajectory" ? "Collision Trajectory"
+              : e.zone_rule === "zone_entry" ? `Zone Entry${e.zone_id ? ` — ${e.zone_id}` : ""}`
+              : "Near Miss";
+    return `Near Miss — ${sub}`;
   }
   return `Zone Intrusion${e.zone_id ? ` — ${e.zone_id}` : ""}`;
 }
@@ -281,10 +343,11 @@ export function EventDetail({ event, onClose }: Props) {
     setTimeout(() => setPdfLoading(false), 3000);
   }
 
-  const ctx        = getResolutionContext(event);
-  const isOpen     = event.end_frame === null;
-  const isPpe      = event.event_type === "missing_ppe";
-  const sColor     = severityColor(event.severity);
+  const ctx         = getResolutionContext(event);
+  const isOpen      = event.end_frame === null;
+  const isPpe       = event.event_type === "missing_ppe";
+  const isNearMiss  = event.event_type === "near_miss";
+  const sColor      = severityColor(event.severity);
   const snapshotFile = event.snapshot_path?.split(/[\\/]/).pop();
 
   // Use stored fine data if available, fall back to live lookup data
@@ -305,7 +368,7 @@ export function EventDetail({ event, onClose }: Props) {
 
         {/* ── Header ── */}
         <div style={{ background: "#1a1a2e", padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 14, flexShrink: 0 }}>
-          <span style={{ fontSize: 28, lineHeight: 1 }}>{isPpe ? "🦺" : "⛔"}</span>
+          <span style={{ fontSize: 28, lineHeight: 1 }}>{isNearMiss ? "⚡" : isPpe ? "🦺" : "⛔"}</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 17, color: "#fff" }}>{eventLabel(event)}</div>
             <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 3 }}>
@@ -472,7 +535,11 @@ export function EventDetail({ event, onClose }: Props) {
           {/* Supervisor recommendations */}
           <InfoBox
             icon={event.severity === "CRITICAL" ? "🚨" : "📋"}
-            title={event.severity === "CRITICAL" ? "Immediate supervisor action required" : "Supervisor recommendation"}
+            title={
+              isNearMiss ? "Near-miss response — supervisor action"
+              : event.severity === "CRITICAL" ? "Immediate supervisor action required"
+              : "Supervisor recommendation"
+            }
             accentColor={event.severity === "CRITICAL" ? "#dc2626" : "#d97706"}
           >
             <div style={{ marginBottom: 10 }}>
