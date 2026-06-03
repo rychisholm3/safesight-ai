@@ -21,6 +21,7 @@ from src.auth.dependencies import require_auth
 from src.auth.models import User
 from src.store import EventStore
 from src.timeline.compliance import ComplianceEngine
+from src.timeline.incidents import detect_incidents
 from src.timeline.notes import NotesDB, SupervisorNote
 from src.timeline.pdf_export import generate_timeline_pdf
 
@@ -116,11 +117,14 @@ def get_timeline(
             for n in notes_map.get(ev["event_id"], [])
         ]
 
-    groups = _group_by_hour(events)
+    groups    = _group_by_hour(events)
+    incidents = detect_incidents(events)
     return {
-        "date":         target.isoformat(),
-        "total_events": len(events),
-        "hours":        groups,
+        "date":           target.isoformat(),
+        "total_events":   len(events),
+        "incident_count": len(incidents),
+        "hours":          groups,
+        "incidents":      incidents,
     }
 
 
@@ -240,6 +244,7 @@ def export_pdf(
             hour_groups    = groups,
             notes_by_event = notes_map,
             compliance     = compliance,
+            incidents      = detect_incidents(events),
         )
     except Exception as exc:
         logger.error("Timeline PDF generation failed: %s", exc)

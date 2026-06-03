@@ -14,6 +14,178 @@ from src.timeline.notes import NotesDB, SupervisorNote
 from src.timeline.compliance import ComplianceEngine, ComplianceStatus
 
 
+# ── Incident detection ────────────────────────────────────────────────────────
+
+from src.timeline.incidents import detect_incidents, _generate_narrative, _is_escalating
+
+
+class TestDetectIncidents:
+    def _ev(self, track_id=1, event_type="missing_ppe", severity="WARNING",
+            minutes_offset=0, zone_id=None):
+        from datetime import datetime, timezone, timedelta
+        ts = (datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+              + timedelta(minutes=minutes_offset)).isoformat()
+        return {
+            "event_id":   f"ev_{track_id}_{minutes_offset}",
+            "event_type": event_type,
+            "track_id":   track_id,
+            "severity":   severity,
+            "created_at": ts,
+            "zone_id":    zone_id,
+            "missing_ppe": ["hardhat"] if event_type == "missing_ppe" else [],
+        }
+
+    def test_single_event_not_an_incident(self):
+        events = [self._ev(track_id=1, minutes_offset=0)]
+        incidents = detect_incidents(events, min_events=2)
+        assert len(incidents) == 0
+
+    def test_two_events_same_worker_within_window(self):
+        events = [
+            self._ev(track_id=1, minutes_offset=0),
+            self._ev(track_id=1, minutes_offset=10),
+        ]
+        incidents = detect_incidents(events, window_minutes=30, min_events=2)
+        assert len(incidents) == 1
+        assert incidents[0]["event_count"] == 2
+        assert incidents[0]["track_id"] == 1
+
+    def test_two_events_different_workers_not_grouped(self):
+        events = [
+            self._ev(track_id=1, minutes_offset=0),
+            self._ev(track_id=2, minutes_offset=5),
+        ]
+        incidents = detect_incidents(events, window_minutes=30, min_events=2)
+        assert len(incidents) == 0
+
+    def test_events_outside_window_not_grouped(self):
+        events = [
+            self._ev(track_id=1, minutes_offset=0),
+            self._ev(track_id=1, minutes_offset=60),  # outside 30-min window
+        ]
+        incidents = detect_incidents(events, window_minutes=30, min_events=2)
+        assert len(incidents) == 0
+
+    def test_three_events_chained_into_one_incident(self):
+        events = [
+            self._ev(track_id=1, minutes_offset=0),
+            self._ev(track_id=1, minutes_offset=10),
+            self._ev(track_id=1, minutes_offset=20),
+        ]
+        incidents = detect_incidents(events, window_minutes=30, min_events=2)
+        assert len(incidents) == 1
+        assert incidents[0]["event_count"] == 3
+
+    def test_escalating_detected_when_severity_increases(self):
+        events = [
+            self._ev(track_id=1, severity="WARNING",  minutes_offset=0),
+            self._ev(track_id=1, severity="CRITICAL", minutes_offset=10),
+        ]
+        incidents = detect_incidents(events, min_events=2)
+        assert len(incidents) == 1
+        assert incidents[0]["is_escalating"] is True
+
+    def test_not_escalating_when_same_severity(self):
+        events = [
+            self._ev(track_id=1, severity="WARNING", minutes_offset=0),
+            self._ev(track_id=1, severity="WARNING", minutes_offset=10),
+        ]
+        incidents = detect_incidents(events, min_events=2)
+        assert incidents[0]["is_escalating"] is False
+
+    def test_severity_is_max_across_events(self):
+        events = [
+            self._ev(track_id=1, severity="WARNING",  minutes_offset=0),
+            self._ev(track_id=1, severity="CRITICAL", minutes_offset=5),
+        ]
+        incidents = detect_incidents(events, min_events=2)
+        assert incidents[0]["severity"] == "CRITICAL"
+
+    def test_narrative_is_non_empty_string(self):
+        events = [
+            self._ev(track_id=7, minutes_offset=0),
+            self._ev(track_id=7, minutes_offset=5, event_type="zone_intrusion", severity="CRITICAL"),
+        ]
+        incidents = detect_incidents(events, min_events=2)
+        assert len(incidents[0]["narrative"]) > 20
+        assert "7" in incidents[0]["narrative"]  # worker ID in narrative
+
+    def test_event_types_list(self):
+        events = [
+            self._ev(track_id=1, event_type="missing_ppe",    minutes_offset=0),
+            self._ev(track_id=1, event_type="zone_intrusion", minutes_offset=5),
+        ]
+        incidents = detect_incidents(events, min_events=2)
+        assert set(incidents[0]["event_types"]) == {"missing_ppe", "zone_intrusion"}
+
+    def test_zones_list(self):
+        events = [
+            self._ev(track_id=1, zone_id="forklift_lane", minutes_offset=0),
+            self._ev(track_id=1, zone_id="forklift_lane", minutes_offset=5),
+        ]
+        incidents = detect_incidents(events, min_events=2)
+        assert incidents[0]["zones"] == ["forklift_lane"]
+
+    def test_empty_events_returns_empty(self):
+        assert detect_incidents([]) == []
+
+    def test_multiple_workers_multiple_incidents(self):
+        events = [
+            self._ev(track_id=1, minutes_offset=0),
+            self._ev(track_id=1, minutes_offset=5),
+            self._ev(track_id=2, minutes_offset=0),
+            self._ev(track_id=2, minutes_offset=8),
+        ]
+        incidents = detect_incidents(events, min_events=2)
+        assert len(incidents) == 2
+        track_ids = {i["track_id"] for i in incidents}
+        assert track_ids == {1, 2}
+
+    def test_narrative_mentions_escalating_when_escalating(self):
+        events = [
+            self._ev(track_id=3, severity="WARNING",  minutes_offset=0),
+            self._ev(track_id=3, severity="CRITICAL", minutes_offset=5),
+        ]
+        incidents = detect_incidents(events, min_events=2)
+        assert "scalat" in incidents[0]["narrative"].lower()
+
+    def test_incidents_sorted_by_start_time(self):
+        events = [
+            self._ev(track_id=2, minutes_offset=20),
+            self._ev(track_id=2, minutes_offset=25),
+            self._ev(track_id=1, minutes_offset=0),
+            self._ev(track_id=1, minutes_offset=5),
+        ]
+        incidents = detect_incidents(events, min_events=2)
+        assert len(incidents) == 2
+        assert incidents[0]["start_time"] < incidents[1]["start_time"]
+
+
+class TestIsEscalating:
+    def test_warning_to_critical(self):
+        events = [{"severity": "WARNING"}, {"severity": "CRITICAL"}]
+        assert _is_escalating(events) is True
+
+    def test_critical_to_warning_not_escalating(self):
+        events = [{"severity": "CRITICAL"}, {"severity": "WARNING"}]
+        assert _is_escalating(events) is False
+
+    def test_all_same_not_escalating(self):
+        events = [{"severity": "WARNING"}, {"severity": "WARNING"}]
+        assert _is_escalating(events) is False
+
+
+class TestIncidentInTimelineEndpoint:
+    def test_incidents_field_present(self, client):
+        h   = _auth(client)
+        res = client.get("/timeline?date=2024-01-15", headers=h)
+        assert res.status_code == 200
+        body = res.json()
+        assert "incidents" in body
+        assert "incident_count" in body
+        assert isinstance(body["incidents"], list)
+
+
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 @pytest.fixture

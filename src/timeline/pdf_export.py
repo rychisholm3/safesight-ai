@@ -19,6 +19,7 @@ from reportlab.platypus import (
 )
 
 from src.timeline.compliance import ComplianceStatus
+from src.timeline.incidents import _event_label  # reuse the short label helper
 from src.timeline.notes import SupervisorNote
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ def generate_timeline_pdf(
     hour_groups: list[dict],
     notes_by_event: dict[str, list[SupervisorNote]],
     compliance: ComplianceStatus | None,
+    incidents: list[dict] | None = None,
 ) -> bytes:
     buf = io.BytesIO()
     w   = letter[0] - 1.3 * inch
@@ -113,6 +115,82 @@ def generate_timeline_pdf(
         ]))
         story.append(cmp)
     story.append(Spacer(1, 10))
+
+    # ── Incident stories ──────────────────────────────────────────────────────
+    if incidents:
+        story.append(Paragraph(f"Incident Stories ({len(incidents)})", s["h2"]))
+        story.append(HRFlowable(width=w, thickness=0.5, color=_BORDER, spaceAfter=4))
+
+        for inc in incidents:
+            sev_color   = _RED if inc.get("severity") == "CRITICAL" else _AMBER
+            escalating  = inc.get("is_escalating", False)
+            track_id    = inc.get("track_id", "?")
+            dur         = inc.get("duration_minutes", 0)
+            n_ev        = inc.get("event_count", 0)
+            start_ts    = (inc.get("start_time") or "")[:16].replace("T", " ")
+            end_ts      = (inc.get("end_time")   or "")[:16].replace("T", " ")
+
+            # Incident header row
+            inc_hdr = Table([[
+                Paragraph(
+                    f"{'⚠ ESCALATING — ' if escalating else ''}Worker #{track_id}",
+                    ParagraphStyle("ih", fontSize=10, textColor=colors.white, fontName="Helvetica-Bold"),
+                ),
+                Paragraph(
+                    f"{n_ev} events · {dur:.0f} min · {start_ts} → {end_ts}",
+                    ParagraphStyle("im", fontSize=8.5, textColor=colors.HexColor("#cbd5e1")),
+                ),
+            ]], colWidths=[w * 0.40, w * 0.60])
+            inc_hdr.setStyle(TableStyle([
+                ("BACKGROUND",    (0, 0), (-1, -1), sev_color),
+                ("TOPPADDING",    (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ("LEFTPADDING",   (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING",  (0, 0), (-1, -1), 10),
+                ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN",         (1, 0), (1, 0), "RIGHT"),
+            ]))
+            story.append(inc_hdr)
+
+            # Narrative
+            narrative = inc.get("narrative", "")
+            narr_tbl  = Table([[Paragraph(narrative, s["body"])]], colWidths=[w])
+            narr_tbl.setStyle(TableStyle([
+                ("BACKGROUND",    (0, 0), (-1, -1), _LIGHT),
+                ("BOX",           (0, 0), (-1, -1), 0.5, _BORDER),
+                ("TOPPADDING",    (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING",   (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING",  (0, 0), (-1, -1), 10),
+            ]))
+            story.append(narr_tbl)
+
+            # Event sequence within this incident
+            for i, ev in enumerate(inc.get("events", []), 1):
+                ev_ts  = (ev.get("created_at") or "")[:16].replace("T", " ")
+                ev_lbl = _event_label(ev)
+                ev_sev = ev.get("severity", "")
+                ev_clr = _RED if ev_sev == "CRITICAL" else _AMBER
+                seq_tbl = Table([[
+                    Paragraph(f"{i}.", ParagraphStyle("sn", fontSize=8, textColor=_MUTED)),
+                    Paragraph(ev_lbl, ParagraphStyle("sl", fontSize=8.5, textColor=_TEXT)),
+                    Paragraph(ev_sev, ParagraphStyle("ss", fontSize=8, textColor=ev_clr, fontName="Helvetica-Bold")),
+                    Paragraph(ev_ts, s["small"]),
+                ]], colWidths=[w*0.05, w*0.45, w*0.15, w*0.35])
+                seq_tbl.setStyle(TableStyle([
+                    ("BACKGROUND",    (0, 0), (-1, -1), colors.white if i % 2 == 0 else _LIGHT),
+                    ("BOX",           (0, 0), (-1, -1), 0.3, _BORDER),
+                    ("TOPPADDING",    (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    ("LEFTPADDING",   (0, 0), (-1, -1), 10),
+                    ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+                    ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+                ]))
+                story.append(seq_tbl)
+
+            story.append(Spacer(1, 8))
+
+        story.append(Spacer(1, 4))
 
     # ── Hour groups ───────────────────────────────────────────────────────────
     total_events = sum(len(g.get("events", [])) for g in hour_groups)

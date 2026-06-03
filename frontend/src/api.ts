@@ -313,10 +313,27 @@ export interface HourGroup {
   events: TimelineEvent[];
 }
 
+export interface IncidentStory {
+  incident_id:      string;
+  track_id:         number;
+  start_time:       string;
+  end_time:         string;
+  duration_minutes: number;
+  event_count:      number;
+  severity:         string;
+  is_escalating:    boolean;
+  event_types:      string[];
+  zones:            string[];
+  narrative:        string;
+  events:           TimelineEvent[];
+}
+
 export interface TimelineData {
-  date: string;
-  total_events: number;
-  hours: HourGroup[];
+  date:           string;
+  total_events:   number;
+  incident_count: number;
+  hours:          HourGroup[];
+  incidents:      IncidentStory[];
 }
 
 export interface ComplianceData {

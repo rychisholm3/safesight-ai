@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchTimeline, addNote, deleteNote, downloadTimelinePdf,
-  type TimelineData, type TimelineEvent, type HourGroup, type TimelineNote,
+  type TimelineData, type TimelineEvent, type HourGroup,
+  type TimelineNote, type IncidentStory,
 } from "./api";
 
 const TYPE_META: Record<string, { icon: string; color: string; label: string }> = {
@@ -13,6 +14,98 @@ const TYPE_META: Record<string, { icon: string; color: string; label: string }> 
 function fmtTime(iso: string) {
   try { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
   catch { return iso.slice(11, 16); }
+}
+
+// ── Incident story card ───────────────────────────────────────────────────────
+
+function IncidentCard({ incident }: { incident: IncidentStory }) {
+  const [open, setOpen] = useState(false);
+  const isCritical   = incident.severity === "CRITICAL";
+  const borderColor  = incident.is_escalating ? "#dc2626" : isCritical ? "#dc2626" : "#d97706";
+  const bgColor      = incident.is_escalating ? "#fef2f2" : isCritical ? "#fff5f5" : "#fffbeb";
+
+  return (
+    <div style={{
+      borderRadius: 8, border: `1px solid ${borderColor}55`,
+      background: bgColor, overflow: "hidden", marginBottom: 8,
+    }}>
+      {/* Header */}
+      <div
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "10px 14px", cursor: "pointer",
+          borderLeft: `4px solid ${borderColor}`,
+        }}
+      >
+        <span style={{ fontSize: 18 }}>{incident.is_escalating ? "🚨" : "⚠️"}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#1f2937" }}>
+            {incident.is_escalating ? "Escalating Incident" : "Multi-Event Incident"} — Worker #{incident.track_id}
+          </div>
+          <div style={{ fontSize: 11, color: "#6b7280" }}>
+            {incident.event_count} events · {incident.duration_minutes.toFixed(0)} min ·
+            {" "}{fmtTime(incident.start_time)} → {fmtTime(incident.end_time)}
+            {incident.zones.length > 0 && ` · ${incident.zones.join(", ")}`}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>
+          {incident.event_types.map((t) => {
+            const m = TYPE_META[t] ?? { icon: "❓", color: "#6b7280" };
+            return (
+              <span key={t} style={{
+                fontSize: 10, padding: "2px 7px", borderRadius: 10,
+                background: m.color + "22", color: m.color, fontWeight: 700,
+              }}>{m.icon}</span>
+            );
+          })}
+          <span style={{
+            fontSize: 9, padding: "2px 7px", borderRadius: 4,
+            background: borderColor, color: "#fff", fontWeight: 700, letterSpacing: 0.5,
+          }}>
+            {incident.severity}
+          </span>
+          <span style={{ fontSize: 11, color: "#9ca3af" }}>{open ? "▲" : "▼"}</span>
+        </div>
+      </div>
+
+      {/* Narrative */}
+      <div style={{ padding: "8px 14px 6px 18px", fontSize: 12, color: "#374151", lineHeight: 1.6 }}>
+        {incident.narrative}
+      </div>
+
+      {/* Expanded event sequence */}
+      {open && (
+        <div style={{ padding: "0 14px 10px 18px" }}>
+          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+            Event sequence
+          </div>
+          {incident.events.map((ev, i) => {
+            const m = TYPE_META[ev.event_type] ?? { icon: "❓", color: "#6b7280", label: ev.event_type };
+            const ppe = ev.missing_ppe?.join(", ");
+            return (
+              <div key={ev.event_id} style={{
+                display: "flex", gap: 8, alignItems: "flex-start",
+                padding: "4px 0", borderBottom: i < incident.events.length - 1 ? "1px solid #f1f5f9" : "none",
+              }}>
+                <span style={{ fontSize: 12, color: "#9ca3af", minWidth: 20 }}>{i + 1}.</span>
+                <span style={{ fontSize: 13 }}>{m.icon}</span>
+                <div style={{ flex: 1, fontSize: 12, color: "#374151" }}>
+                  {m.label}{ppe ? ` — ${ppe}` : ""}
+                </div>
+                <span style={{
+                  fontSize: 9, padding: "1px 6px", borderRadius: 3,
+                  background: ev.severity === "CRITICAL" ? "#dc2626" : "#d97706",
+                  color: "#fff", fontWeight: 700, flexShrink: 0,
+                }}>{ev.severity}</span>
+                <span style={{ fontSize: 11, color: "#9ca3af", flexShrink: 0 }}>{fmtTime(ev.created_at)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Supervisor note input ─────────────────────────────────────────────────────
@@ -331,6 +424,32 @@ export function TimelinePanel() {
           No events recorded for {date}.
         </div>
       )}
+      {/* Incident stories — shown above the hour feed */}
+      {!loading && data && data.incidents && data.incidents.length > 0 && (
+        <div>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8, marginBottom: 8,
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#dc2626" }}>
+              🚨 Incident Stories
+            </span>
+            <span style={{
+              fontSize: 11, padding: "2px 8px", borderRadius: 10,
+              background: "#dc2626", color: "#fff", fontWeight: 700,
+            }}>
+              {data.incidents.length}
+            </span>
+            <span style={{ fontSize: 11, color: "#6b7280" }}>
+              — multi-event sequences from the same worker
+            </span>
+          </div>
+          {data.incidents.map((inc) => (
+            <IncidentCard key={inc.incident_id} incident={inc} />
+          ))}
+        </div>
+      )}
+
+      {/* Hour-by-hour event feed */}
       {!loading && data && data.hours.map((group) => (
         <HourBucket
           key={group.hour}
