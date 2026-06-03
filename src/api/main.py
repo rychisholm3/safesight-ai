@@ -15,6 +15,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.api.cameras import router as cameras_router
+from src.timeline.compliance import ComplianceEngine
+from src.timeline.notes import NotesDB
+from src.timeline.router import (
+    _get_store      as _timeline_get_store,
+    _get_notes_db   as _timeline_get_notes_db,
+    _get_compliance as _timeline_get_compliance,
+    router as timeline_router,
+)
 from src.evidence.router import (
     _get_event_store  as _evidence_get_event_store,
     _get_snapshot_dir as _evidence_get_snapshot_dir,
@@ -83,10 +91,12 @@ _shared_conn: sqlite3.Connection = sqlite3.connect(
 )
 _shared_conn.row_factory = sqlite3.Row
 
-_store: EventStore       = EventStore(db_path=_DB_PATH, snapshot_dir=_SNAPSHOT_DIR)
-auth_db: AuthDB          = AuthDB(_shared_conn)
+_store: EventStore           = EventStore(db_path=_DB_PATH, snapshot_dir=_SNAPSHOT_DIR)
+auth_db: AuthDB              = AuthDB(_shared_conn)
 notification_db: NotificationDB = NotificationDB(_shared_conn)
-risk_engine: RiskEngine  = RiskEngine(_shared_conn)
+risk_engine: RiskEngine      = RiskEngine(_shared_conn)
+notes_db: NotesDB            = NotesDB(_shared_conn)
+compliance_engine: ComplianceEngine = ComplianceEngine(_shared_conn)
 
 _notification_dispatcher = NotificationDispatcher(
     notification_db  = notification_db,
@@ -120,9 +130,13 @@ app.include_router(cameras_router)
 app.include_router(osha_router)
 app.include_router(evidence_router)
 app.include_router(copilot_router)
+app.include_router(timeline_router)
 app.dependency_overrides[_get_notification_db]     = _get_notification_db_impl
 app.dependency_overrides[_get_risk_engine]         = _get_risk_engine_impl
 app.dependency_overrides[_evidence_get_event_store]  = get_store
+app.dependency_overrides[_timeline_get_store]        = get_store
+app.dependency_overrides[_timeline_get_notes_db]     = lambda: notes_db
+app.dependency_overrides[_timeline_get_compliance]   = lambda: compliance_engine
 app.dependency_overrides[_evidence_get_snapshot_dir] = lambda: _SNAPSHOT_DIR
 app.dependency_overrides[_copilot_get_event_store]   = get_store
 app.dependency_overrides[_copilot_get_risk_engine] = _get_risk_engine_impl

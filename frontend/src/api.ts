@@ -281,6 +281,112 @@ export async function fetchOshaCodes(): Promise<OshaCode[]> {
   return res.json();
 }
 
+// ── Timeline & Compliance ─────────────────────────────────────────────────────
+
+export interface TimelineNote {
+  note_id: string;
+  event_id: string;
+  user_id: string;
+  note: string;
+  created_at: string;
+}
+
+export interface TimelineEvent extends Record<string, unknown> {
+  event_id: string;
+  event_type: string;
+  track_id: number;
+  zone_id: string | null;
+  zone_rule: string | null;
+  missing_ppe: string[];
+  severity: string;
+  created_at: string;
+  end_frame: number | null;
+  osha_codes: string[];
+  fine_max_usd: number;
+  notes: TimelineNote[];
+}
+
+export interface HourGroup {
+  hour: number;
+  label: string;
+  event_count: number;
+  events: TimelineEvent[];
+}
+
+export interface TimelineData {
+  date: string;
+  total_events: number;
+  hours: HourGroup[];
+}
+
+export interface ComplianceData {
+  status: {
+    ppe_pct: number;
+    zone_pct: number;
+    overall_pct: number;
+    pass_fail: "PASS" | "FAIL";
+    tracked_workers_24h: number;
+    computed_at: string;
+  };
+  history: Array<{
+    date: string;
+    ppe_pct: number;
+    zone_pct: number;
+    overall_pct: number;
+    event_count: number;
+  }>;
+  forecast: {
+    predicted_pct: number;
+    trend: "RISING" | "FALLING" | "STABLE";
+    trend_pct: number;
+  };
+}
+
+export async function fetchTimeline(date?: string): Promise<TimelineData> {
+  const qs = date ? `?date=${date}` : "";
+  const res = await apiFetch(`/timeline${qs}`);
+  if (!res.ok) throw new Error("Failed to fetch timeline");
+  return res.json();
+}
+
+export async function fetchCompliance(): Promise<ComplianceData> {
+  const res = await apiFetch("/timeline/compliance");
+  if (!res.ok) throw new Error("Failed to fetch compliance");
+  return res.json();
+}
+
+export async function addNote(eventId: string, note: string): Promise<TimelineNote> {
+  const res = await apiFetch(`/timeline/${eventId}/note`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });
+  if (!res.ok) throw new Error("Failed to add note");
+  return res.json();
+}
+
+export async function deleteNote(noteId: string): Promise<void> {
+  await apiFetch(`/timeline/notes/${noteId}`, { method: "DELETE" });
+}
+
+export function downloadTimelinePdf(date?: string): void {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const qs  = date ? `?date=${date}` : "";
+  const url = `${BASE}/timeline/export.pdf${qs}`;
+  fetch(url, { headers })
+    .then((r) => r.blob())
+    .then((blob) => {
+      const d   = date ?? new Date().toISOString().slice(0, 10);
+      const a   = document.createElement("a");
+      a.href    = URL.createObjectURL(blob);
+      a.download = `safesight-timeline-${d}.pdf`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    })
+    .catch(() => alert("Timeline PDF generation failed."));
+}
+
 // ── Evidence & Explainability ─────────────────────────────────────────────────
 
 export interface ExplanationItem {

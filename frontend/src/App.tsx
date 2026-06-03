@@ -8,6 +8,8 @@ import { ZoneEditor } from "./ZoneEditor";
 import { LoginPage } from "./LoginPage";
 import { SettingsPage } from "./SettingsPage";
 import { CopilotPanel } from "./CopilotPanel";
+import { CompliancePanel } from "./CompliancePanel";
+import { TimelinePanel } from "./TimelinePanel";
 import { RiskPanel } from "./RiskPanel";
 import { SetupWizard } from "./SetupWizard";
 
@@ -47,7 +49,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
   const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion" | "near_miss">("all");
   const [severityFilter, setSeverityFilter] = useState<"all" | "WARNING" | "CRITICAL">("all");
   const [connected, setConnected] = useState(false);
-  const [view, setView] = useState<"events" | "risk" | "copilot">("events");
+  const [view, setView] = useState<"events" | "risk" | "copilot" | "timeline" | "compliance">("events");
 
   const refreshStats = useCallback(() => {
     fetchStats().then(setStats).catch(() => {});
@@ -192,7 +194,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
         }}
       >
         {/* View toggle */}
-        {(["events", "risk", "copilot"] as const).map((v) => (   // eslint-disable-line
+        {(["events", "risk", "copilot", "timeline", "compliance"] as const).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
@@ -205,7 +207,11 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
               fontWeight: view === v ? 600 : 400,
             }}
           >
-            {v === "events" ? "Events" : v === "risk" ? "Risk" : "🤖 Copilot"}
+            {v === "events"     ? "Events"
+             : v === "risk"     ? "Risk"
+             : v === "copilot"  ? "🤖 Copilot"
+             : v === "timeline" ? "📋 Timeline"
+             :                    "✅ Compliance"}
           </button>
         ))}
 
@@ -261,6 +267,10 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
       <div style={{ padding: "16px 24px", maxWidth: view === "copilot" ? 820 : 900, margin: "0 auto" }}>
         {view === "copilot" ? (
           <CopilotPanel userRole={user.role} />
+        ) : view === "timeline" ? (
+          <TimelinePanel />
+        ) : view === "compliance" ? (
+          <CompliancePanel />
         ) : view === "risk" ? (
           <RiskPanel />
         ) : visible.length === 0 ? (
