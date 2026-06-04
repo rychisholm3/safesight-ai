@@ -147,10 +147,12 @@ Key design decisions:
 - Live compliance status: PPE %, zone %, overall PASS / FAIL
 - Predicted compliance for tomorrow based on current trends; compliance history graph
 
-### Phase 9 — Automated Root Cause Analysis
+### Phase 9 — Automated Root Cause Analysis ✅
 - Time-of-day correlation: detect when violations cluster (shift changes, lunch, end of day)
-- Location + worker-type correlation (temp vs. permanent staff, subcontractor breakdowns)
+- Location correlation: zone hotspot analysis with peak hours per zone
+- Worker behaviour segmentation: isolated / recurring / chronic offenders with time + zone affinity
 - Root cause summary auto-generated per site per week; intervention recommendations
+- Note: worker-type (temp/perm/subcontractor) requires HR system integration — out of scope for vision-only detection
 
 ### Phase 10 — Analytics, Safety Score & Heatmaps
 - Analytics API: violations by day / week / type / zone / worker; trend charts
