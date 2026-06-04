@@ -9,6 +9,7 @@ import { LoginPage } from "./LoginPage";
 import { SettingsPage } from "./SettingsPage";
 import { CopilotPanel } from "./CopilotPanel";
 import { CompliancePanel } from "./CompliancePanel";
+import { RootCausePanel } from "./RootCausePanel";
 import { TimelinePanel } from "./TimelinePanel";
 import { RiskPanel } from "./RiskPanel";
 import { SetupWizard } from "./SetupWizard";
@@ -49,7 +50,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
   const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion" | "near_miss">("all");
   const [severityFilter, setSeverityFilter] = useState<"all" | "WARNING" | "CRITICAL">("all");
   const [connected, setConnected] = useState(false);
-  const [view, setView] = useState<"events" | "risk" | "copilot" | "timeline" | "compliance">("events");
+  const [view, setView] = useState<"events" | "risk" | "copilot" | "timeline" | "compliance" | "rootcause">("events");
 
   const refreshStats = useCallback(() => {
     fetchStats().then(setStats).catch(() => {});
@@ -194,7 +195,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
         }}
       >
         {/* View toggle */}
-        {(["events", "risk", "copilot", "timeline", "compliance"] as const).map((v) => (
+        {(["events", "risk", "copilot", "timeline", "compliance", "rootcause"] as const).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
@@ -210,8 +211,9 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
             {v === "events"     ? "Events"
              : v === "risk"     ? "Risk"
              : v === "copilot"  ? "🤖 Copilot"
-             : v === "timeline" ? "📋 Timeline"
-             :                    "✅ Compliance"}
+             : v === "timeline"    ? "📋 Timeline"
+             : v === "compliance" ? "✅ Compliance"
+             :                      "🔍 Root Cause"}
           </button>
         ))}
 
@@ -271,6 +273,8 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
           <TimelinePanel />
         ) : view === "compliance" ? (
           <CompliancePanel />
+        ) : view === "rootcause" ? (
+          <RootCausePanel />
         ) : view === "risk" ? (
           <RiskPanel />
         ) : visible.length === 0 ? (

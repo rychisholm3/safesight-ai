@@ -281,6 +281,63 @@ export async function fetchOshaCodes(): Promise<OshaCode[]> {
   return res.json();
 }
 
+// ── Root Cause Analysis ───────────────────────────────────────────────────────
+
+export interface HourBucket {
+  hour: number; label: string; count: number;
+  period: string; z_score: number; is_peak: boolean;
+}
+export interface ShiftPeriod {
+  name: string; count: number; avg_per_hour: number;
+  risk_level: "LOW"|"ELEVATED"|"HIGH"|"CRITICAL"; dominant_type: string;
+}
+export interface ZonePattern {
+  zone_id: string; count: number; ppe_count: number;
+  zone_count: number; nm_count: number;
+  peak_hour: number|null; peak_period: string|null;
+}
+export interface WorkerPattern {
+  track_id: number; violation_count: number;
+  segment: "isolated"|"recurring"|"chronic";
+  dominant_type: string; primary_zone: string|null;
+  peak_hour: number|null; peak_period: string|null;
+}
+export interface RootCauseAnalysisData {
+  days_analysed: number; event_total: number; computed_at: string;
+  hour_buckets: HourBucket[];
+  shift_periods: ShiftPeriod[];
+  zone_patterns: ZonePattern[];
+  global_events: Record<string, number>;
+  worker_patterns: WorkerPattern[];
+  top_peak_periods: string[];
+  top_hotspot_zones: string[];
+}
+export interface RootCauseSummary {
+  generated_by: string;
+  days_analysed: number;
+  event_total: number;
+  root_causes: Array<{title: string; evidence: string; type: string}>;
+  recommendations: string[];
+  executive_summary?: string;
+  worker_segments: Record<string, number>;
+  top_peak_periods: string[];
+  top_hotspot_zones: string[];
+  computed_at: string;
+  ai_error?: string;
+}
+
+export async function fetchRootCauseAnalysis(days = 7): Promise<RootCauseAnalysisData> {
+  const res = await apiFetch(`/rootcause/analysis?days=${days}`);
+  if (!res.ok) throw new Error("Failed to fetch root cause analysis");
+  return res.json();
+}
+
+export async function fetchRootCauseSummary(days = 7): Promise<RootCauseSummary> {
+  const res = await apiFetch(`/rootcause/summary?days=${days}`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to generate root cause summary");
+  return res.json();
+}
+
 // ── Timeline & Compliance ─────────────────────────────────────────────────────
 
 export interface TimelineNote {

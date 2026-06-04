@@ -15,6 +15,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.api.cameras import router as cameras_router
+from src.rootcause.router import (
+    _get_conn as _rootcause_get_conn,
+    router as rootcause_router,
+)
 from src.timeline.compliance import ComplianceEngine
 from src.timeline.notes import NotesDB
 from src.timeline.router import (
@@ -131,9 +135,11 @@ app.include_router(osha_router)
 app.include_router(evidence_router)
 app.include_router(copilot_router)
 app.include_router(timeline_router)
+app.include_router(rootcause_router)
 app.dependency_overrides[_get_notification_db]     = _get_notification_db_impl
 app.dependency_overrides[_get_risk_engine]         = _get_risk_engine_impl
 app.dependency_overrides[_evidence_get_event_store]  = get_store
+app.dependency_overrides[_rootcause_get_conn]        = lambda: _shared_conn
 app.dependency_overrides[_timeline_get_store]        = get_store
 app.dependency_overrides[_timeline_get_notes_db]     = lambda: notes_db
 app.dependency_overrides[_timeline_get_compliance]   = lambda: compliance_engine
