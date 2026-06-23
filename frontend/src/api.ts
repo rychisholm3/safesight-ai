@@ -534,6 +534,92 @@ export async function askCopilot(
   return res.json();
 }
 
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+export interface DayBucket {
+  date: string;
+  total: number;
+  ppe: number;
+  zone: number;
+  near_miss: number;
+}
+
+export interface AnalyticsScore {
+  score: number;
+  ppe_score: number;
+  zone_score: number;
+  near_miss_score: number;
+  prev_score: number;
+  violations_7d: number;
+  ppe_7d: number;
+  zone_7d: number;
+  near_miss_7d: number;
+  computed_at: string;
+}
+
+export interface ScoreDay {
+  date: string;
+  score: number;
+  ppe_score: number;
+  zone_score: number;
+  near_miss_score: number;
+  event_count: number;
+}
+
+export interface ZoneStat {
+  zone_id: string;
+  total: number;
+  critical_count: number;
+}
+
+export interface AnalyticsWorkerStat {
+  track_id: number;
+  violation_count: number;
+  most_common_type: string;
+}
+
+export interface HeatmapPoint {
+  x: number;
+  y: number;
+  severity: string;
+}
+
+export async function fetchAnalyticsScore(): Promise<AnalyticsScore> {
+  const res = await apiFetch("/analytics/score");
+  if (!res.ok) throw new Error("Failed to fetch safety score");
+  return res.json();
+}
+
+export async function fetchScoreHistory(days = 30): Promise<ScoreDay[]> {
+  const res = await apiFetch(`/analytics/score/history?days=${days}`);
+  if (!res.ok) throw new Error("Failed to fetch score history");
+  return res.json();
+}
+
+export async function fetchViolationsDaily(days = 7): Promise<DayBucket[]> {
+  const res = await apiFetch(`/analytics/violations/daily?days=${days}`);
+  if (!res.ok) throw new Error("Failed to fetch daily violations");
+  return res.json();
+}
+
+export async function fetchViolationsByZone(): Promise<ZoneStat[]> {
+  const res = await apiFetch("/analytics/violations/by-zone");
+  if (!res.ok) throw new Error("Failed to fetch violations by zone");
+  return res.json();
+}
+
+export async function fetchViolationsByWorker(limit = 15): Promise<AnalyticsWorkerStat[]> {
+  const res = await apiFetch(`/analytics/violations/by-worker?limit=${limit}`);
+  if (!res.ok) throw new Error("Failed to fetch violations by worker");
+  return res.json();
+}
+
+export async function fetchHeatmapPoints(): Promise<HeatmapPoint[]> {
+  const res = await apiFetch("/analytics/heatmap");
+  if (!res.ok) throw new Error("Failed to fetch heatmap data");
+  return res.json();
+}
+
 /** Fetch a representative JPEG frame from a video file and return a blob: URL. */
 export async function fetchVideoSnapshot(videoPath: string): Promise<string> {
   const token = getToken();

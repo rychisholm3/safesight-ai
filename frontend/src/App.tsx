@@ -9,6 +9,7 @@ import { LoginPage } from "./LoginPage";
 import { SettingsPage } from "./SettingsPage";
 import { CopilotPanel } from "./CopilotPanel";
 import { CompliancePanel } from "./CompliancePanel";
+import { AnalyticsPanel } from "./AnalyticsPanel";
 import { RootCausePanel } from "./RootCausePanel";
 import { TimelinePanel } from "./TimelinePanel";
 import { RiskPanel } from "./RiskPanel";
@@ -50,7 +51,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
   const [filter, setFilter] = useState<"all" | "missing_ppe" | "zone_intrusion" | "near_miss">("all");
   const [severityFilter, setSeverityFilter] = useState<"all" | "WARNING" | "CRITICAL">("all");
   const [connected, setConnected] = useState(false);
-  const [view, setView] = useState<"events" | "risk" | "copilot" | "timeline" | "compliance" | "rootcause">("events");
+  const [view, setView] = useState<"events" | "risk" | "copilot" | "timeline" | "compliance" | "rootcause" | "analytics">("events");
 
   const refreshStats = useCallback(() => {
     fetchStats().then(setStats).catch(() => {});
@@ -195,7 +196,7 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
         }}
       >
         {/* View toggle */}
-        {(["events", "risk", "copilot", "timeline", "compliance", "rootcause"] as const).map((v) => (
+        {(["events", "risk", "analytics", "copilot", "timeline", "compliance", "rootcause"] as const).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
@@ -208,9 +209,10 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
               fontWeight: view === v ? 600 : 400,
             }}
           >
-            {v === "events"     ? "Events"
-             : v === "risk"     ? "Risk"
-             : v === "copilot"  ? "🤖 Copilot"
+            {v === "events"      ? "Events"
+             : v === "risk"      ? "Risk"
+             : v === "analytics" ? "📊 Analytics"
+             : v === "copilot"   ? "🤖 Copilot"
              : v === "timeline"    ? "📋 Timeline"
              : v === "compliance" ? "✅ Compliance"
              :                      "🔍 Root Cause"}
@@ -266,8 +268,10 @@ function Dashboard({ user, signOut }: { user: { email: string; role: string }; s
       </div>
 
       {/* Main content */}
-      <div style={{ padding: "16px 24px", maxWidth: view === "copilot" ? 820 : 900, margin: "0 auto" }}>
-        {view === "copilot" ? (
+      <div style={{ padding: "16px 24px", maxWidth: view === "copilot" ? 820 : view === "analytics" ? 960 : 900, margin: "0 auto" }}>
+        {view === "analytics" ? (
+          <AnalyticsPanel />
+        ) : view === "copilot" ? (
           <CopilotPanel userRole={user.role} />
         ) : view === "timeline" ? (
           <TimelinePanel />

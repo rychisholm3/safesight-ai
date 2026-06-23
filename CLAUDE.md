@@ -8,7 +8,7 @@ SafeSight AI is a real-time construction safety intelligence platform. It ingest
 
 The goal is not to be another object-detection wrapper. SafeSight is built to answer: *"why is risk increasing, what is about to go wrong, and what should we do about it?"*
 
-**Status: active development.** Phase 1 (auth, organisations, RBAC) is complete. Next: Phase 2 (multi-channel notifications).
+**Status: active development.** Phases 1–9 complete. Phase 10 (analytics, safety score, heatmap) in progress.
 
 ## Setup
 

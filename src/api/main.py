@@ -14,6 +14,9 @@ from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from src.analytics.engine import AnalyticsEngine
+from src.analytics.router import _get_engine as _analytics_get_engine
+from src.analytics.router import router as analytics_router
 from src.api.cameras import router as cameras_router
 from src.rootcause.router import (
     _get_conn as _rootcause_get_conn,
@@ -101,6 +104,7 @@ notification_db: NotificationDB = NotificationDB(_shared_conn)
 risk_engine: RiskEngine      = RiskEngine(_shared_conn)
 notes_db: NotesDB            = NotesDB(_shared_conn)
 compliance_engine: ComplianceEngine = ComplianceEngine(_shared_conn)
+analytics_engine: AnalyticsEngine   = AnalyticsEngine(_shared_conn)
 
 _notification_dispatcher = NotificationDispatcher(
     notification_db  = notification_db,
@@ -127,6 +131,7 @@ StoreDep = Annotated[EventStore, Depends(get_store)]
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
+app.include_router(analytics_router)
 app.include_router(auth_router)
 app.include_router(notifications_router)
 app.include_router(risk_router)
@@ -136,6 +141,7 @@ app.include_router(evidence_router)
 app.include_router(copilot_router)
 app.include_router(timeline_router)
 app.include_router(rootcause_router)
+app.dependency_overrides[_analytics_get_engine]    = lambda: analytics_engine
 app.dependency_overrides[_get_notification_db]     = _get_notification_db_impl
 app.dependency_overrides[_get_risk_engine]         = _get_risk_engine_impl
 app.dependency_overrides[_evidence_get_event_store]  = get_store
