@@ -17,7 +17,7 @@ const ERR: React.CSSProperties = {
 };
 
 export function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, signInAsGuest } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [orgName, setOrgName] = useState("");
   const [email, setEmail] = useState("");
@@ -131,6 +131,27 @@ export function LoginPage() {
             Your role will be Safety Officer.
           </p>
         )}
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 4px" }}>
+          <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+          <span style={{ fontSize: 11, color: "#9ca3af" }}>or</span>
+          <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+        </div>
+
+        <button
+          onClick={signInAsGuest}
+          style={{
+            width: "100%", padding: "11px", borderRadius: 6,
+            border: "1px solid #d1d5db", background: "#fff",
+            color: "#6b7280", fontSize: 14, fontWeight: 500,
+            cursor: "pointer",
+          }}
+        >
+          Continue as Guest
+        </button>
+        <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", marginTop: 8, lineHeight: 1.5 }}>
+          Demo mode — no account needed. Data is read-only.
+        </p>
       </div>
     </div>
   );
