@@ -7,7 +7,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from src.events import Event
+from src.pipeline.events import Event
 
 logger = logging.getLogger(__name__)
 

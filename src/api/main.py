@@ -56,7 +56,7 @@ from src.notifications.router import router as notifications_router
 from src.risk.engine import RiskEngine
 from src.risk.router import _get_risk_engine
 from src.risk.router import router as risk_router
-from src.store import EventStore
+from src.pipeline.store import EventStore
 
 
 @asynccontextmanager

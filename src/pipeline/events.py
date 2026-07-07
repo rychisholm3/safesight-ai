@@ -3,7 +3,7 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from src.rules import Violation
+from src.pipeline.rules import Violation
 
 logger = logging.getLogger(__name__)
 

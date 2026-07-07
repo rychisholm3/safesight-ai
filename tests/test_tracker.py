@@ -4,8 +4,8 @@ import numpy as np
 import supervision as sv
 import pytest
 
-from src.detector import Detection
-from src.tracker import TrackedObject, Tracker
+from src.pipeline.detector import Detection
+from src.pipeline.tracker import TrackedObject, Tracker
 
 FRAME_ID = 10
 
@@ -29,7 +29,7 @@ def tracked_sv(rows: list[tuple]) -> sv.Detections:
 
 @pytest.fixture
 def mock_bytetrack():
-    with patch("src.tracker.ByteTrackTracker") as mock_cls:
+    with patch("src.pipeline.tracker.ByteTrackTracker") as mock_cls:
         yield mock_cls
 
 

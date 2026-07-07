@@ -6,7 +6,7 @@ import {
 import {
   fetchRootCauseAnalysis, fetchRootCauseSummary,
   type RootCauseAnalysisData, type RootCauseSummary,
-} from "./api";
+} from "../../lib/api";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

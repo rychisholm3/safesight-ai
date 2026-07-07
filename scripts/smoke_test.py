@@ -21,10 +21,10 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.detector import Detector, Detection
-from src.reader import FrameReader
-from src.sources import WebcamSource
-from src.tracker import Tracker, TrackedObject
+from src.pipeline.detector import Detector, Detection
+from src.pipeline.reader import FrameReader
+from src.pipeline.sources import WebcamSource
+from src.pipeline.tracker import Tracker, TrackedObject
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("smoke_test")

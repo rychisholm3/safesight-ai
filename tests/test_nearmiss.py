@@ -15,8 +15,8 @@ import pytest
 from src.nearmiss.proximity import bbox_min_distance, bbox_center, VEHICLE_CLASSES
 from src.nearmiss.trajectory import TrajectoryTracker
 from src.nearmiss.engine import NearMissEngine
-from src.detector import Detection
-from src.tracker import TrackedObject
+from src.pipeline.detector import Detection
+from src.pipeline.tracker import TrackedObject
 
 
 # ── bbox_min_distance ─────────────────────────────────────────────────────────
@@ -274,7 +274,7 @@ class TestNearMissEngineTrajectory:
 
 class TestNearMissEngineZoneEntry:
     def _scene_with_zone(self):
-        from src.rules import SceneConfig, ZoneConfig
+        from src.pipeline.rules import SceneConfig, ZoneConfig
         zone = ZoneConfig(
             id="restricted", name="Restricted", rule="no_entry",
             polygon=[(200, 200), (400, 200), (400, 400), (200, 400)],
@@ -315,7 +315,7 @@ class TestNearMissApiIntegration:
     def test_near_miss_events_returned_by_list_endpoint(self):
         from fastapi.testclient import TestClient
         from src.api.main import app, _store
-        from src.events import Event
+        from src.pipeline.events import Event
 
         client = TestClient(app)
 

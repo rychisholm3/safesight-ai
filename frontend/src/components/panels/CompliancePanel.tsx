@@ -3,7 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
 } from "recharts";
-import { fetchCompliance, type ComplianceData } from "./api";
+import { fetchCompliance, type ComplianceData } from "../../lib/api";
 
 const TREND_ARROW: Record<string, string> = {
   RISING:  "↑",

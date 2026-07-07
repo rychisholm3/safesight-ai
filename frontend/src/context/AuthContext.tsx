@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { clearToken, fetchMe, getToken, setToken, type UserInfo } from "./api";
+import { clearToken, fetchMe, getToken, setToken, type UserInfo } from "../lib/api";
 
 const GUEST_USER: UserInfo = {
   user_id: "guest",

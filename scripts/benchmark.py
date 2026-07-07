@@ -31,8 +31,8 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.detector import Detector
-from src.tracker import Tracker
+from src.pipeline.detector import Detector
+from src.pipeline.tracker import Tracker
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("benchmark")

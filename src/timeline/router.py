@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 
 from src.auth.dependencies import require_auth
 from src.auth.models import User
-from src.store import EventStore
+from src.pipeline.store import EventStore
 from src.timeline.compliance import ComplianceEngine
 from src.timeline.incidents import detect_incidents
 from src.timeline.notes import NotesDB, SupervisorNote

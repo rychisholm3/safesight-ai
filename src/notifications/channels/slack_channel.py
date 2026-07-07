@@ -8,7 +8,7 @@ import logging
 import os
 import urllib.request
 
-from src.events import Event
+from src.pipeline.events import Event
 
 logger = logging.getLogger(__name__)
 

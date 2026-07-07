@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import type { RiskSummary, WorkerRisk, ZoneRisk } from "./api";
-import { fetchRepeatOffenders, fetchRiskSummary, fetchZoneRisks } from "./api";
+import type { RiskSummary, WorkerRisk, ZoneRisk } from "../../lib/api";
+import { fetchRepeatOffenders, fetchRiskSummary, fetchZoneRisks } from "../../lib/api";
 
 // ── Colour maps ───────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import pytest
-from src.events import Event, EventDebouncer
-from src.rules import Violation
+from src.pipeline.events import Event, EventDebouncer
+from src.pipeline.rules import Violation
 
 
 FPS = 15.0

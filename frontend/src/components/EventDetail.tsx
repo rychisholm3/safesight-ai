@@ -3,14 +3,14 @@
  * industry resolution context, and supervisor escalation recommendations.
  */
 import { useEffect, useState } from "react";
-import type { SafeEvent } from "./types";
+import type { SafeEvent } from "../types";
 import {
   fetchOshaLookup,
   fetchExplanation,
   fetchAnnotatedSnapshot,
   downloadEvidencePdf,
-} from "./api";
-import type { OshaCode, ExplanationItem } from "./api";
+} from "../lib/api";
+import type { OshaCode, ExplanationItem } from "../lib/api";
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 

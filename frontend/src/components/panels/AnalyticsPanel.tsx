@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   AnalyticsScore, AnalyticsWorkerStat, DayBucket,
   HeatmapPoint, ScoreDay, ZoneStat,
-} from "./api";
+} from "../../lib/api";
 import {
   fetchAnalyticsScore, fetchHeatmapPoints, fetchScoreHistory,
   fetchViolationsByWorker, fetchViolationsByZone, fetchViolationsDaily,
-} from "./api";
+} from "../../lib/api";
 
 // ── Score gauge (SVG arc) ─────────────────────────────────────────────────────
 

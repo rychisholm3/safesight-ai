@@ -5,7 +5,7 @@ import numpy as np
 import supervision as sv
 from trackers import ByteTrackTracker
 
-from src.detector import Detection
+from src.pipeline.detector import Detection
 
 logger = logging.getLogger(__name__)
 

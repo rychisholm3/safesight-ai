@@ -421,7 +421,7 @@ class TestComplianceEndpoint:
 class TestNotesEndpoints:
     def _insert_event(self, client, h) -> str:
         from src.api.main import _store
-        from src.events import Event
+        from src.pipeline.events import Event
         ev = Event(
             event_id="note_test_ev01", event_type="missing_ppe",
             track_id=3, zone_id=None, missing_ppe=["hardhat"],

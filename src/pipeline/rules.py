@@ -6,8 +6,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from src.detector import Detection
-from src.tracker import TrackedObject
+from src.pipeline.detector import Detection
+from src.pipeline.tracker import TrackedObject
 
 logger = logging.getLogger(__name__)
 

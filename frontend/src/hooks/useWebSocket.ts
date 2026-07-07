@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import type { SafeEvent } from "./types";
-import { WS_URL } from "./api";
+import type { SafeEvent } from "../types";
+import { WS_URL } from "../lib/api";
 
 type WsMessage =
   | { type: "history"; events: SafeEvent[] }

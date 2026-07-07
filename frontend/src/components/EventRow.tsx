@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { SafeEvent } from "./types";
+import type { SafeEvent } from "../types";
 import { EventDetail } from "./EventDetail";
 
 function label(e: SafeEvent): string {

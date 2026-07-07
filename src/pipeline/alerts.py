@@ -21,7 +21,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from src.events import Event
+from src.pipeline.events import Event
 
 logger = logging.getLogger(__name__)
 

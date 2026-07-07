@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from src.alerts import WebhookAlerter
-from src.events import Event
+from src.pipeline.alerts import WebhookAlerter
+from src.pipeline.events import Event
 
 
 def make_event(severity: str = "CRITICAL") -> Event:

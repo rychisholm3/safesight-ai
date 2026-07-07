@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from src.events import Event
+from src.pipeline.events import Event
 
 logger = logging.getLogger(__name__)
 

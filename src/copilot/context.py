@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.risk.engine import RiskEngine
-from src.store import EventStore
+from src.pipeline.store import EventStore
 
 logger = logging.getLogger(__name__)
 

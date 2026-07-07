@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SafeEvent, Stats } from "./types";
-import { fetchStats } from "./api";
-import { useAuth } from "./AuthContext";
-import { useWebSocket } from "./useWebSocket";
-import { EventRow } from "./EventRow";
-import { ZoneEditor } from "./ZoneEditor";
-import { LoginPage } from "./LoginPage";
-import { SettingsPage } from "./SettingsPage";
-import { CopilotPanel } from "./CopilotPanel";
-import { CompliancePanel } from "./CompliancePanel";
-import { AnalyticsPanel } from "./AnalyticsPanel";
-import { RootCausePanel } from "./RootCausePanel";
-import { TimelinePanel } from "./TimelinePanel";
-import { RiskPanel } from "./RiskPanel";
-import { SetupWizard } from "./SetupWizard";
+import { fetchStats } from "./lib/api";
+import { useAuth } from "./context/AuthContext";
+import { useWebSocket } from "./hooks/useWebSocket";
+import { EventRow } from "./components/EventRow";
+import { ZoneEditor } from "./components/ZoneEditor";
+import { LoginPage } from "./pages/LoginPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { CopilotPanel } from "./components/panels/CopilotPanel";
+import { CompliancePanel } from "./components/panels/CompliancePanel";
+import { AnalyticsPanel } from "./components/panels/AnalyticsPanel";
+import { RootCausePanel } from "./components/panels/RootCausePanel";
+import { TimelinePanel } from "./components/panels/TimelinePanel";
+import { RiskPanel } from "./components/panels/RiskPanel";
+import { SetupWizard } from "./components/SetupWizard";
 
 const MAX_EVENTS = 200;
 

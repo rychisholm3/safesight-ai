@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { askCopilot, type CopilotMessage } from "./api";
+import { askCopilot, type CopilotMessage } from "../../lib/api";
 
 // ── Suggested starter questions per role ──────────────────────────────────────
 const STARTERS: Record<string, string[]> = {

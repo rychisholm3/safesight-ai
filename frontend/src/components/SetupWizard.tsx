@@ -15,8 +15,8 @@
  * Re-opens any time via the ⚙ Setup button in the dashboard header.
  */
 import { useEffect, useState } from "react";
-import type { CameraInfo, VideoFileInfo } from "./api";
-import { fetchCameras, fetchCameraSnapshot, fetchVideoFiles, fetchVideoSnapshot, saveZones } from "./api";
+import type { CameraInfo, VideoFileInfo } from "../lib/api";
+import { fetchCameras, fetchCameraSnapshot, fetchVideoFiles, fetchVideoSnapshot, saveZones } from "../lib/api";
 import type { DrawnZone } from "./ZoneCanvas";
 import { ZoneCanvas } from "./ZoneCanvas";
 

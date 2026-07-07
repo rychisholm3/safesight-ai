@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { NotificationPrefs } from "./api";
-import { fetchNotificationPrefs, saveNotificationPrefs } from "./api";
+import type { NotificationPrefs } from "../lib/api";
+import { fetchNotificationPrefs, saveNotificationPrefs } from "../lib/api";
 
 const CARD: React.CSSProperties = {
   background: "#fff",

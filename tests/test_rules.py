@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from src.detector import Detection
-from src.tracker import TrackedObject
-from src.rules import RulesEngine, SceneConfig, Violation, ZoneConfig
+from src.pipeline.detector import Detection
+from src.pipeline.tracker import TrackedObject
+from src.pipeline.rules import RulesEngine, SceneConfig, Violation, ZoneConfig
 
 FRAME_ID = 5
 

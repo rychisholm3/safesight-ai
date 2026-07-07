@@ -21,15 +21,15 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from src.detector import Detection
+from src.pipeline.detector import Detection
 from src.nearmiss.proximity import (
     VEHICLE_CLASSES,
     ProximityConfig,
     bbox_min_distance,
 )
 from src.nearmiss.trajectory import TrajectoryTracker
-from src.rules import SceneConfig, Violation
-from src.tracker import TrackedObject
+from src.pipeline.rules import SceneConfig, Violation
+from src.pipeline.tracker import TrackedObject
 
 logger = logging.getLogger(__name__)
 

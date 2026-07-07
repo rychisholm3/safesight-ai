@@ -19,7 +19,7 @@ from src.evidence.explanation import ExplanationItem, build_explanation
 from src.evidence.pdf_export import generate_evidence_pdf
 from src.osha.matcher import match_violation
 from src.osha.rules import OshaCode
-from src.store import EventStore
+from src.pipeline.store import EventStore
 
 logger = logging.getLogger(__name__)
 

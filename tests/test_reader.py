@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock
 
-from src.sources import SourceInfo
-from src.reader import FrameReader
+from src.pipeline.sources import SourceInfo
+from src.pipeline.reader import FrameReader
 
 
 FRAME = np.zeros((480, 640, 3), dtype=np.uint8)

@@ -8,12 +8,12 @@
  *  • Save button persists changes to zones.json immediately
  */
 import { useCallback, useEffect, useState } from "react";
-import type { CameraInfo, VideoFileInfo } from "./api";
+import type { CameraInfo, VideoFileInfo } from "../lib/api";
 import {
   fetchCameraSnapshot, fetchCameras, fetchVideoFiles,
   fetchVideoSnapshot, fetchZones, saveZones,
-} from "./api";
-import type { Zone, ZonesConfig } from "./types";
+} from "../lib/api";
+import type { Zone, ZonesConfig } from "../types";
 import type { DrawnZone } from "./ZoneCanvas";
 import { ZoneCanvas } from "./ZoneCanvas";
 

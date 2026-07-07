@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 from src.api import main as api_module
 from src.api.main import app
 from src.api.ws import ConnectionManager, EventBroadcaster, _event_to_dict
-from src.events import Event
-from src.store import EventStore
+from src.pipeline.events import Event
+from src.pipeline.store import EventStore
 
 
 def make_event(**kwargs) -> Event:

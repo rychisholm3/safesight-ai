@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 from src.api.main import app
 from src.auth.dependencies import require_auth
 from src.auth.models import Role, User
-from src.events import Event
+from src.pipeline.events import Event
 from src.notifications.channels.email_channel import _build_html
 from src.notifications.channels.slack_channel import send_slack
 from src.notifications.channels.sms_channel import _build_body, TwilioConfig

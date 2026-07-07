@@ -17,7 +17,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
-from src.events import Event
+from src.pipeline.events import Event
 
 logger = logging.getLogger(__name__)
 

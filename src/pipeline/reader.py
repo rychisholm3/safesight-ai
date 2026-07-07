@@ -4,7 +4,7 @@ import threading
 
 import numpy as np
 
-from src.sources import SourceInfo, VideoSource
+from src.pipeline.sources import SourceInfo, VideoSource
 
 logger = logging.getLogger(__name__)
 

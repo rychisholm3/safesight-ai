@@ -30,17 +30,17 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from src.alerts import WebhookAlerter
+from src.pipeline.alerts import WebhookAlerter
 from src.api.ws import broadcaster
-from src.detector import Detection, Detector
-from src.events import EventDebouncer
+from src.pipeline.detector import Detection, Detector
+from src.pipeline.events import EventDebouncer
 from src.osha.matcher import fine_range, match_violation
-from src.reader import FrameReader
+from src.pipeline.reader import FrameReader
 from src.nearmiss.engine import NearMissEngine
-from src.rules import RulesEngine, SceneConfig
-from src.sources import open_source
-from src.store import EventStore
-from src.tracker import Tracker
+from src.pipeline.rules import RulesEngine, SceneConfig
+from src.pipeline.sources import open_source
+from src.pipeline.store import EventStore
+from src.pipeline.tracker import Tracker
 
 logging.basicConfig(
     level=logging.INFO,
@@ -332,6 +332,7 @@ def run(
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
+        prog="python -m src.pipeline",
         description="SafeSight AI — real-time construction site safety monitoring",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )

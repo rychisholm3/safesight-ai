@@ -8,8 +8,8 @@ from src.api import main as api_module
 from src.api.main import app
 from src.auth.dependencies import require_auth
 from src.auth.models import Role, User
-from src.events import Event
-from src.store import EventStore
+from src.pipeline.events import Event
+from src.pipeline.store import EventStore
 
 
 def make_event(**kwargs) -> Event:

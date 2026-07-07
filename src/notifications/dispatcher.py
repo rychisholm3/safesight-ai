@@ -18,7 +18,7 @@ import threading
 from datetime import datetime, timezone
 
 from src.auth.db import AuthDB
-from src.events import Event
+from src.pipeline.events import Event
 from src.notifications.channels.email_channel import EmailConfig, send_email
 from src.notifications.channels.slack_channel import send_slack
 from src.notifications.channels.sms_channel import TwilioConfig, send_sms

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import supervision as sv
 
-from src.detector import Detection, Detector
+from src.pipeline.detector import Detection, Detector
 
 FRAME = np.zeros((480, 640, 3), dtype=np.uint8)
 NAMES = {0: "person", 1: "hardhat", 2: "vest"}
@@ -28,7 +28,7 @@ def make_mock_result(rows: list[tuple[float, float, float, float, int, float]]) 
 
 @pytest.fixture
 def mock_yolo():
-    with patch("src.detector.YOLO") as mock_cls:
+    with patch("src.pipeline.detector.YOLO") as mock_cls:
         mock_cls.return_value.names = NAMES
         yield mock_cls
 

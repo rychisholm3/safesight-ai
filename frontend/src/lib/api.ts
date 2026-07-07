@@ -1,4 +1,4 @@
-import type { SafeEvent, Stats, ZonesConfig } from "./types";
+import type { SafeEvent, Stats, ZonesConfig } from "../types";
 
 // ── OSHA Rule Engine ──────────────────────────────────────────────────────────
 

@@ -19,7 +19,7 @@ from src.auth.models import User
 from src.copilot.context import build_site_context
 from src.copilot.prompts import SUGGESTED_QUESTIONS_TAG, build_system_prompt
 from src.risk.engine import RiskEngine
-from src.store import EventStore
+from src.pipeline.store import EventStore
 
 logger = logging.getLogger(__name__)
 

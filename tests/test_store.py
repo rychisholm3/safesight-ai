@@ -5,8 +5,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from src.events import Event
-from src.store import EventStore
+from src.pipeline.events import Event
+from src.pipeline.store import EventStore
 
 
 def make_event(**kwargs) -> Event:

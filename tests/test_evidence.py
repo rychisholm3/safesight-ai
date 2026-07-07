@@ -364,7 +364,7 @@ def _login(client):
 def _insert_event(client, headers) -> str:
     """Insert a fake event via the event store and return its event_id."""
     from src.api.main import _store
-    from src.events import Event
+    from src.pipeline.events import Event
     ev = Event(
         event_id    = "evd_test_001",
         event_type  = "missing_ppe",

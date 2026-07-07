@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { login, register } from "./api";
-import { useAuth } from "./AuthContext";
+import { login, register } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 
 const FIELD: React.CSSProperties = {
   width: "100%", padding: "10px 12px", borderRadius: 6,
