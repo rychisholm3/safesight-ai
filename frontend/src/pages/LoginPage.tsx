@@ -41,6 +41,18 @@ export function LoginPage() {
     }
   }
 
+  async function continueAsGuest() {
+    setError(null);
+    setBusy(true);
+    try {
+      await signInAsGuest();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Guest login failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center",
@@ -139,7 +151,8 @@ export function LoginPage() {
         </div>
 
         <button
-          onClick={signInAsGuest}
+          onClick={continueAsGuest}
+          disabled={busy}
           style={{
             width: "100%", padding: "11px", borderRadius: 6,
             border: "1px solid #d1d5db", background: "#fff",
@@ -147,7 +160,7 @@ export function LoginPage() {
             cursor: "pointer",
           }}
         >
-          Continue as Guest
+          {busy ? "Please wait…" : "Continue as Guest"}
         </button>
         <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", marginTop: 8, lineHeight: 1.5 }}>
           Demo mode — no account needed. Data is read-only.

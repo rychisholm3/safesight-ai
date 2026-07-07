@@ -1,12 +1,15 @@
 """
-Auth endpoints: register, login, refresh, me.
+Auth endpoints: register, login, refresh, me, guest.
 
 POST /auth/register  – create org + first Safety Officer user
 POST /auth/login     – returns access + refresh tokens
 POST /auth/refresh   – exchange refresh token for new access token
+POST /auth/guest      – returns tokens for the shared read-only demo account
 GET  /auth/me        – return current user info
 """
 import logging
+import secrets
+import sqlite3
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from jose import JWTError
@@ -24,6 +27,9 @@ from src.auth.security import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+GUEST_ORG_NAME = "Demo Organization"
+GUEST_EMAIL    = "guest@safesight.demo"
 
 
 # ── Request / response schemas ────────────────────────────────────────────────
@@ -100,6 +106,35 @@ def register(body: RegisterRequest, db: AuthDB = Depends(_get_auth_db)):
         role=Role.safety_officer,
     )
     logger.info("New org registered: org=%s user=%s", org.name, user.email)
+    return TokenResponse(
+        access_token=create_access_token(user.user_id, user.role.value, user.org_id),
+        refresh_token=create_refresh_token(user.user_id),
+    )
+
+
+@router.post("/guest", response_model=TokenResponse)
+def guest_login(db: AuthDB = Depends(_get_auth_db)):
+    """
+    Issue real tokens for the shared read-only demo account, creating it on
+    first use. Lets "Continue as Guest" reuse the normal auth flow instead of
+    faking a signed-in user the backend has never heard of.
+    """
+    user = db.get_user_by_email(GUEST_EMAIL)
+    if user is None:
+        try:
+            org = db.create_org(GUEST_ORG_NAME)
+            user = db.create_user(
+                org_id=org.org_id,
+                email=GUEST_EMAIL,
+                plain_password=secrets.token_hex(32),
+                role=Role.auditor,
+            )
+            logger.info("Guest demo account created: org=%s user=%s", org.name, user.email)
+        except sqlite3.IntegrityError:
+            # Lost a race with a concurrent guest login that created it first.
+            user = db.get_user_by_email(GUEST_EMAIL)
+            if user is None:
+                raise
     return TokenResponse(
         access_token=create_access_token(user.user_id, user.role.value, user.org_id),
         refresh_token=create_refresh_token(user.user_id),

@@ -196,6 +196,35 @@ class TestLogin:
         assert r.status_code == 401
 
 
+class TestGuest:
+    def test_returns_tokens(self, client):
+        r = client.post("/auth/guest")
+        assert r.status_code == 200
+        data = r.json()
+        assert "access_token" in data
+        assert "refresh_token" in data
+
+    def test_token_authenticates_and_reads_as_auditor(self, client):
+        tokens = client.post("/auth/guest").json()
+        r = client.get("/auth/me", headers={
+            "Authorization": f"Bearer {tokens['access_token']}",
+        })
+        assert r.status_code == 200
+        assert r.json()["role"] == "auditor"
+        assert r.json()["email"] == "guest@safesight.demo"
+
+    def test_reuses_same_account_across_calls(self, client):
+        first = client.post("/auth/guest").json()
+        second = client.post("/auth/guest").json()
+        me1 = client.get("/auth/me", headers={
+            "Authorization": f"Bearer {first['access_token']}",
+        }).json()
+        me2 = client.get("/auth/me", headers={
+            "Authorization": f"Bearer {second['access_token']}",
+        }).json()
+        assert me1["user_id"] == me2["user_id"]
+
+
 class TestRefresh:
     def test_returns_new_access_token(self, client):
         r = client.post("/auth/register", json={

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   fetchTimeline, addNote, deleteNote, downloadTimelinePdf,
   type TimelineData, type TimelineEvent, type HourGroup,

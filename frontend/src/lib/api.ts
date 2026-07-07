@@ -84,6 +84,12 @@ export async function register(
   return res.json();
 }
 
+export async function guestLogin(): Promise<AuthTokens> {
+  const res = await fetch(`${BASE}/auth/guest`, { method: "POST" });
+  if (!res.ok) throw new Error("Guest login failed");
+  return res.json();
+}
+
 export async function login(email: string, password: string): Promise<AuthTokens> {
   const res = await fetch(`${BASE}/auth/login`, {
     method: "POST",

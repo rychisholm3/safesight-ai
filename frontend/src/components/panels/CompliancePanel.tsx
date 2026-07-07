@@ -17,8 +17,8 @@ const TREND_COLOR: Record<string, string> = {
 };
 
 function GaugeCard({
-  label, value, pass, suffix = "%",
-}: { label: string; value: number; pass: boolean; suffix?: string }) {
+  label, value, suffix = "%",
+}: { label: string; value: number; suffix?: string }) {
   const color = value >= (label === "Zone" ? 95 : 90)
     ? "#059669"
     : value >= 70 ? "#d97706" : "#dc2626";
@@ -104,8 +104,8 @@ export function CompliancePanel() {
 
       {/* Gauge cards */}
       <div style={{ display: "flex", gap: 12 }}>
-        <GaugeCard label="PPE"  value={status.ppe_pct}  pass={status.ppe_pct  >= 90} />
-        <GaugeCard label="Zone" value={status.zone_pct} pass={status.zone_pct >= 95} />
+        <GaugeCard label="PPE"  value={status.ppe_pct} />
+        <GaugeCard label="Zone" value={status.zone_pct} />
 
         {/* Forecast card */}
         <div style={{
@@ -145,7 +145,7 @@ export function CompliancePanel() {
             />
             <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#6b7280" }} />
             <Tooltip
-              formatter={(v: number, name: string) => [`${v.toFixed(1)}%`, name]}
+              formatter={(v, name) => [`${Number(v).toFixed(1)}%`, name]}
               labelFormatter={(l) => `Date: ${l}`}
               contentStyle={{ fontSize: 12, borderRadius: 6 }}
             />

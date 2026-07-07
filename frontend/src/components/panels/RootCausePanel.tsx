@@ -13,9 +13,6 @@ import {
 const RISK_COLOR: Record<string, string> = {
   CRITICAL: "#dc2626", HIGH: "#f97316", ELEVATED: "#d97706", LOW: "#6b7280",
 };
-const SEG_COLOR: Record<string, string> = {
-  isolated: "#6b7280", recurring: "#d97706", chronic: "#dc2626",
-};
 const TYPE_LABEL: Record<string, string> = {
   missing_ppe: "Missing PPE", zone_intrusion: "Zone Intrusion",
   near_miss: "Near Miss", none: "None",
@@ -54,7 +51,7 @@ function TimeOfDayChart({ data }: { data: RootCauseAnalysisData }) {
           <XAxis dataKey="label" tick={{ fontSize: 9, fill: "#9ca3af" }} interval={3} />
           <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} />
           <Tooltip
-            formatter={(v: number, _n: string, props: { payload?: { period?: string; z_score?: number } }) => [
+            formatter={(v, _n, props: { payload?: { period?: string; z_score?: number } }) => [
               `${v} violations (Z=${props.payload?.z_score ?? 0})`,
               props.payload?.period ?? "",
             ]}
@@ -128,7 +125,7 @@ function ZoneHotspotChart({ data }: { data: RootCauseAnalysisData }) {
           <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#9ca3af" }} />
           <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} />
           <Tooltip
-            formatter={(v: number, name: string) => [v, TYPE_LABEL[name] ?? name]}
+            formatter={(v, name) => [v, TYPE_LABEL[String(name)] ?? name]}
             contentStyle={{ fontSize: 11, borderRadius: 6 }}
           />
           <Bar dataKey="ppe"  name="missing_ppe"    stackId="a" fill="#d97706" radius={[0, 0, 0, 0]} />

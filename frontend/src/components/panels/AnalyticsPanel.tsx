@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   AnalyticsScore, AnalyticsWorkerStat, DayBucket,
-  HeatmapPoint, ScoreDay, ZoneStat,
+  HeatmapPoint, ZoneStat,
 } from "../../lib/api";
 import {
-  fetchAnalyticsScore, fetchHeatmapPoints, fetchScoreHistory,
+  fetchAnalyticsScore, fetchHeatmapPoints,
   fetchViolationsByWorker, fetchViolationsByZone, fetchViolationsDaily,
 } from "../../lib/api";
 
@@ -189,7 +189,6 @@ function Heatmap({ points }: { points: HeatmapPoint[] }) {
 
 export function AnalyticsPanel() {
   const [score,    setScore]    = useState<AnalyticsScore | null>(null);
-  const [history,  setHistory]  = useState<ScoreDay[]>([]);
   const [daily,    setDaily]    = useState<DayBucket[]>([]);
   const [byZone,   setByZone]   = useState<ZoneStat[]>([]);
   const [byWorker, setByWorker] = useState<AnalyticsWorkerStat[]>([]);
@@ -202,14 +201,13 @@ export function AnalyticsPanel() {
     setLoading(true);
     Promise.all([
       fetchAnalyticsScore(),
-      fetchScoreHistory(30),
       fetchViolationsDaily(7),
       fetchViolationsByZone(),
       fetchViolationsByWorker(10),
       fetchHeatmapPoints(),
     ])
-      .then(([sc, hist, day, zone, worker, heat]) => {
-        setScore(sc); setHistory(hist); setDaily(day);
+      .then(([sc, day, zone, worker, heat]) => {
+        setScore(sc); setDaily(day);
         setByZone(zone); setByWorker(worker); setHeatmap(heat);
         setError(null);
       })
@@ -227,8 +225,6 @@ export function AnalyticsPanel() {
   if (error) return (
     <div style={{ textAlign: "center", padding: "60px 0", color: "#dc2626", fontSize: 14 }}>{error}</div>
   );
-
-  const void_history = history; // kept for future trend mini-chart
 
   return (
     <div>
